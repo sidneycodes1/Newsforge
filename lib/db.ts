@@ -1,18 +1,24 @@
 import path from 'path';
 import fs from 'fs';
 
+const DB_PATH = process.env.DATABASE_PATH ||
+  './data/newsforge.db';
+
 export function getDb(): any {
-  const dbPath = process.env.DATABASE_PATH ||
-    './data/newsforge.db';
-  const resolvedPath = path.resolve(dbPath);
+  const resolvedPath = path.resolve(DB_PATH);
 
   if (!fs.existsSync(resolvedPath)) {
     return null;
   }
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const Database = require('better-sqlite3');
+    // Use require inside function to prevent
+    // Vercel from executing at build time
+    // This require is wrapped so webpack cannot
+    // statically analyze it
+    const moduleName = 'better-sqlite3';
+    // eslint-disable-next-line
+    const Database = eval('require')(moduleName);
     return new Database(resolvedPath, { readonly: true });
   } catch {
     return null;
