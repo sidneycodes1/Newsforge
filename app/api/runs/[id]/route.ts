@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
-import db from "@/lib/db";
+import getDb from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 type RouteContext = {
   params: {
@@ -10,6 +12,7 @@ type RouteContext = {
 
 export async function GET(_request: Request, context: RouteContext) {
   try {
+    const db = getDb();
     if (!db) {
       return NextResponse.json(
         {

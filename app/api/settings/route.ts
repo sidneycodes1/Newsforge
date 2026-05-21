@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 type ConfigFile = {
   topic: string;
   schedule: string;

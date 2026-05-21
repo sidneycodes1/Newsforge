@@ -1,26 +1,27 @@
-import { existsSync } from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
 
-const databasePath = path.resolve(
-  process.cwd(),
-  process.env.DATABASE_PATH ?? "./data/newsforge.db"
-);
+const DB_PATH = process.env.DATABASE_PATH || "./data/newsforge.db";
 
-function openReadOnlyDatabase() {
-  if (!existsSync(databasePath)) {
-    console.warn(`[db] SQLite file not found at ${databasePath}`);
-    return null;
-  }
+let db: any = null;
+
+function getDb() {
+  if (db) return db;
 
   try {
-    return new DatabaseSync(databasePath, { readOnly: true });
-  } catch (error) {
-    console.warn(`[db] Failed to open readonly database at ${databasePath}`, error);
+    const resolvedPath = path.resolve(DB_PATH);
+    if (!fs.existsSync(resolvedPath)) {
+      console.log("[db] SQLite file not found at", resolvedPath);
+      return null;
+    }
+
+    const Database = require("better-sqlite3");
+    db = new Database(resolvedPath, { readonly: true });
+    return db;
+  } catch (err: any) {
+    console.log("[db] Failed to open database:", err.message);
     return null;
   }
 }
 
-const db = openReadOnlyDatabase();
-
-export default db;
+export default getDb;

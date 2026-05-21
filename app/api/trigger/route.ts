@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 const FLAG_PATH = path.join(process.cwd(), "data", "trigger.flag");
 
 export async function POST() {
