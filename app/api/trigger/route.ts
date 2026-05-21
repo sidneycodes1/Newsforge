@@ -1,20 +1,24 @@
-import fs from "node:fs";
-import path from "node:path";
+import { NextResponse } from 'next/server';
+import fs from 'fs';
 
-import { NextResponse } from "next/server";
-
-export const dynamic = "force-dynamic";
-
-const FLAG_PATH = path.join(process.cwd(), "data", "trigger.flag");
+export const dynamic = 'force-dynamic';
 
 export async function POST() {
-  fs.mkdirSync(path.dirname(FLAG_PATH), { recursive: true });
-  fs.writeFileSync(FLAG_PATH, new Date().toISOString(), "utf8");
-
-  return NextResponse.json({
-    data: {
-      triggered: true,
-    },
-    error: null,
-  });
+  try {
+    try {
+      fs.mkdirSync('./data', { recursive: true });
+      fs.writeFileSync('./data/trigger.flag', '1', 'utf-8');
+    } catch {
+      // ignore on read-only filesystems
+    }
+    return NextResponse.json({
+      data: { triggered: true },
+      error: null,
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { data: null, error: err.message },
+      { status: 500 }
+    );
+  }
 }

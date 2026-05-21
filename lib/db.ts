@@ -1,27 +1,20 @@
-import fs from "node:fs";
-import path from "node:path";
+import path from 'path';
+import fs from 'fs';
 
-const DB_PATH = process.env.DATABASE_PATH || "./data/newsforge.db";
+export function getDb(): any {
+  const dbPath = process.env.DATABASE_PATH ||
+    './data/newsforge.db';
+  const resolvedPath = path.resolve(dbPath);
 
-let db: any = null;
-
-function getDb() {
-  if (db) return db;
+  if (!fs.existsSync(resolvedPath)) {
+    return null;
+  }
 
   try {
-    const resolvedPath = path.resolve(DB_PATH);
-    if (!fs.existsSync(resolvedPath)) {
-      console.log("[db] SQLite file not found at", resolvedPath);
-      return null;
-    }
-
-    const Database = require("better-sqlite3");
-    db = new Database(resolvedPath, { readonly: true });
-    return db;
-  } catch (err: any) {
-    console.log("[db] Failed to open database:", err.message);
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Database = require('better-sqlite3');
+    return new Database(resolvedPath, { readonly: true });
+  } catch {
     return null;
   }
 }
-
-export default getDb;
