@@ -325,7 +325,7 @@ export async function fetchNews(
       const res = await axios.post(
         url,
         {
-          q: `${topic} news`,
+          query: `${topic} latest news`,
           num: 5,
           gl: "us",
           hl: "en",
@@ -651,12 +651,18 @@ export async function generateAudio(
 
     const taskId = (fishRes.data as any)?.task_id || (fishRes.data as any)?.data?.[0]?.id;
     if (taskId) {
-      for (let i = 0; i < 6; i++) {
-        await new Promise((r) => setTimeout(r, 5000));
-        const poll = await axios.get(`https://api.acedata.cloud/fish/audios/${taskId}`, {
+      for (let i = 0; i < 12; i++) {
+        console.log("[ACE] Fish poll attempt", i + 1, "taskId:", taskId);
+        await new Promise((r) => setTimeout(r, 3000));
+        const poll = await axios.get("https://api.acedata.cloud/fish/audios", {
+          params: { task_id: taskId },
           headers: { Authorization: `Bearer ${TOKEN}` },
           timeout: 10000,
         });
+        console.log(
+          "[ACE] Fish poll response:",
+          JSON.stringify(poll.data).slice(0, 200)
+        );
         const state = (poll.data as any)?.data?.[0]?.state || (poll.data as any)?.state;
         const url = (poll.data as any)?.data?.[0]?.audio_url || (poll.data as any)?.audio_url;
         console.log("[ACE] Fish poll:", state, url);

@@ -26,5 +26,3 @@ export function getDb(): any {
     return null;
   }
 }
-
-export default getDb;
