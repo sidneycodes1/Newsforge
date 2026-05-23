@@ -1,11 +1,26 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import path from 'path';
+import fs from 'fs';
 
 export const dynamic = 'force-dynamic';
 
+function openDb() {
+  const dbPath = path.resolve(
+    process.env.DATABASE_PATH || './data/newsforge.db'
+  );
+  if (!fs.existsSync(dbPath)) return null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const Database = require('better-sqlite3');
+    return new Database(dbPath, { readonly: true });
+  } catch {
+    return null;
+  }
+}
+
 export async function GET() {
   try {
-    const db = getDb();
+    const db = openDb();
     if (!db) {
       return NextResponse.json(
         { data: null, error: null },
@@ -39,8 +54,7 @@ export async function GET() {
       { headers: { 'Cache-Control': 'no-store' } }
     );
   } catch (err: any) {
-    console.error('[api/runs/active] FULL ERROR:',
-      err.message, err.stack);
+    console.error('[api/runs/active]', err.message);
     return NextResponse.json(
       { data: null, error: err.message },
       { status: 500 }
