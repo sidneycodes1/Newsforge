@@ -4,23 +4,27 @@ import fs from 'fs';
 const DB_PATH = process.env.DATABASE_PATH ||
   './data/newsforge.db';
 
+let _db: any = null;
+
 export function getDb(): any {
+  if (_db) return _db;
+
   const resolvedPath = path.resolve(DB_PATH);
 
   if (!fs.existsSync(resolvedPath)) {
+    console.log('[db] SQLite file not found at',
+      resolvedPath);
     return null;
   }
 
   try {
-    // Use require inside function to prevent
-    // Vercel from executing at build time
-    // This require is wrapped so webpack cannot
-    // statically analyze it
-    const moduleName = 'better-sqlite3';
-    // eslint-disable-next-line
-    const Database = eval('require')(moduleName);
-    return new Database(resolvedPath, { readonly: true });
-  } catch {
+    const Database = require('better-sqlite3');
+    _db = new Database(resolvedPath, { readonly: true });
+    return _db;
+  } catch (err: any) {
+    console.log('[db] Failed to open:', err.message);
     return null;
   }
 }
+
+export default getDb;
