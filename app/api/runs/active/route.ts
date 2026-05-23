@@ -1,19 +1,25 @@
 import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
+import { DatabaseSync } from 'node:sqlite';
 
 export const dynamic = 'force-dynamic';
 
 function openDb() {
-  const dbPath = path.resolve(
-    process.env.DATABASE_PATH || './data/newsforge.db'
-  );
-  if (!fs.existsSync(dbPath)) return null;
+  const dbPath = process.env.DATABASE_PATH
+    ? path.resolve(process.env.DATABASE_PATH)
+    : path.join(process.cwd(), 'data', 'newsforge.db');
+
+  console.log('[db] opening:', dbPath);
+
+  if (!fs.existsSync(dbPath)) {
+    console.log('[db] file not found:', dbPath);
+    return null;
+  }
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const Database = require('better-sqlite3');
-    return new Database(dbPath, { readonly: true });
-  } catch {
+    return new DatabaseSync(dbPath, { readOnly: true });
+  } catch (err: any) {
+    console.log('[db] error:', err.message);
     return null;
   }
 }
@@ -48,6 +54,7 @@ export async function GET() {
     const steps = db.prepare(
       'SELECT * FROM steps WHERE run_id = ? ORDER BY step_number ASC'
     ).all((run as any).id);
+    db.close();
 
     return NextResponse.json(
       { data: { run, steps }, error: null },
