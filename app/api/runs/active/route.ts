@@ -39,6 +39,8 @@ export async function GET() {
       { headers: { 'Cache-Control': 'no-store' } }
     );
   } catch (err: any) {
+    console.error('[api/runs/active] FULL ERROR:',
+      err.message, err.stack);
     return NextResponse.json(
       { data: null, error: err.message },
       { status: 500 }

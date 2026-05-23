@@ -28,6 +28,8 @@ export async function GET() {
 
     return NextResponse.json({ data: runs, error: null });
   } catch (err: any) {
+    console.error('[api/runs] FULL ERROR:',
+      err.message, err.stack);
     return NextResponse.json(
       { data: [], error: err.message },
       { status: 500 }
