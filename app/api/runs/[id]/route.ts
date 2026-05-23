@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
-import { DatabaseSync } from 'node:sqlite';
+import Database from 'better-sqlite3';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +17,7 @@ function openDb() {
     return null;
   }
   try {
-    return new DatabaseSync(dbPath, { readOnly: true });
+    return new Database(dbPath, { readonly: true, fileMustExist: true });
   } catch (err: any) {
     console.log('[db] error:', err.message);
     return null;

@@ -2,7 +2,7 @@
 
 const { mkdirSync } = require("node:fs");
 const path = require("node:path");
-const { DatabaseSync } = require("node:sqlite");
+const Database = require("better-sqlite3");
 const { SCHEMA } = require("./schema");
 
 const databasePath = path.resolve(
@@ -12,7 +12,7 @@ const databasePath = path.resolve(
 
 mkdirSync(path.dirname(databasePath), { recursive: true });
 
-const db = new DatabaseSync(databasePath);
+const db = new Database(databasePath);
 
 db.exec(SCHEMA);
 

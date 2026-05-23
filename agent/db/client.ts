@@ -1,6 +1,6 @@
 import { mkdirSync } from "node:fs";
 import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import Database from "better-sqlite3";
 import { SCHEMA } from "./schema";
 
 const databasePath = path.resolve(
@@ -10,7 +10,7 @@ const databasePath = path.resolve(
 
 mkdirSync(path.dirname(databasePath), { recursive: true });
 
-const db = new DatabaseSync(databasePath);
+const db = new Database(databasePath);
 
 db.exec(SCHEMA);
 
