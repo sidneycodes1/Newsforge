@@ -29,13 +29,13 @@ export async function runNewsForge(): Promise<void> {
   const runId = randomUUID();
   const topic = process.env.AGENT_TOPIC || "Solana ecosystem";
 
-  const previousRuns = getRuns();
+  const previousRuns = await getRuns();
   const runNumber = previousRuns.length + 1;
 
   console.log(`\nStarting Run #${runNumber} - ${topic}`);
   console.log(`Run ID: ${runId}`);
 
-  createRun({
+  await createRun({
     id: runId,
     run_number: runNumber,
     topic,
@@ -48,9 +48,9 @@ export async function runNewsForge(): Promise<void> {
   let imageData: any = null;
   let audioData: any = null;
 
-  const failRun = (stepId: string, stepStart: number, error: unknown) => {
+  const failRun = async (stepId: string, stepStart: number, error: unknown) => {
     const message = toErrorMessage(error);
-    updateStepComplete(stepId, {
+    await updateStepComplete(stepId, {
       status: "failed",
       cost_usdc: 0,
       tx_hash: "",
@@ -58,26 +58,26 @@ export async function runNewsForge(): Promise<void> {
       output_ref: message,
       completed_at: new Date().toISOString(),
     });
-    updateRunStatus(runId, "failed", message);
+    await updateRunStatus(runId, "failed", message);
     console.error("Run failed:", message);
   };
 
   // STEP 1: Fetch News
   const step1Id = randomUUID();
-  createStep({
+  await createStep({
     id: step1Id,
     run_id: runId,
     step_number: 1,
     step_name: "fetch_news",
     api_used: "ACE Serp Google API",
   });
-  updateStepStatus(step1Id, "running");
+  await updateStepStatus(step1Id, "running");
   const s1Start = Date.now();
 
   try {
     newsData = await fetchNews(topic, runId);
     totalCostAce += newsData.costUsdc;
-    updateStepComplete(step1Id, {
+    await updateStepComplete(step1Id, {
       status: "complete",
       cost_usdc: newsData.costUsdc,
       tx_hash: newsData.txHash,
@@ -89,26 +89,26 @@ export async function runNewsForge(): Promise<void> {
       `Step 1 complete - ${newsData.headlines.length} headlines fetched`
     );
   } catch (error) {
-    failRun(step1Id, s1Start, error);
+    await failRun(step1Id, s1Start, error);
     return;
   }
 
   // STEP 2: Write Article
   const step2Id = randomUUID();
-  createStep({
+  await createStep({
     id: step2Id,
     run_id: runId,
     step_number: 2,
     step_name: "write_article",
     api_used: "ACE Chat API",
   });
-  updateStepStatus(step2Id, "running");
+  await updateStepStatus(step2Id, "running");
   const s2Start = Date.now();
 
   try {
     articleData = await writeArticle(topic, newsData, runId);
     totalCostAce += articleData.costUsdc;
-    updateStepComplete(step2Id, {
+    await updateStepComplete(step2Id, {
       status: "complete",
       cost_usdc: articleData.costUsdc,
       tx_hash: articleData.txHash,
@@ -118,26 +118,26 @@ export async function runNewsForge(): Promise<void> {
     });
     console.log(`Step 2 complete - Article: "${articleData.title}"`);
   } catch (error) {
-    failRun(step2Id, s2Start, error);
+    await failRun(step2Id, s2Start, error);
     return;
   }
 
   // STEP 3: Generate Image
   const step3Id = randomUUID();
-  createStep({
+  await createStep({
     id: step3Id,
     run_id: runId,
     step_number: 3,
     step_name: "generate_image",
     api_used: "ACE Flux API",
   });
-  updateStepStatus(step3Id, "running");
+  await updateStepStatus(step3Id, "running");
   const s3Start = Date.now();
 
   try {
     imageData = await generateImage(articleData.title, runId);
     totalCostAce += imageData.costUsdc;
-    updateStepComplete(step3Id, {
+    await updateStepComplete(step3Id, {
       status: "complete",
       cost_usdc: imageData.costUsdc,
       tx_hash: imageData.txHash,
@@ -147,7 +147,7 @@ export async function runNewsForge(): Promise<void> {
     });
     console.log("Step 3 complete - Image saved");
   } catch (error) {
-    updateStepComplete(step3Id, {
+    await updateStepComplete(step3Id, {
       status: "failed",
       cost_usdc: 0,
       tx_hash: "",
@@ -160,20 +160,20 @@ export async function runNewsForge(): Promise<void> {
 
   // STEP 4: Generate Audio
   const step4Id = randomUUID();
-  createStep({
+  await createStep({
     id: step4Id,
     run_id: runId,
     step_number: 4,
     step_name: "generate_audio",
     api_used: "ACE TTS API",
   });
-  updateStepStatus(step4Id, "running");
+  await updateStepStatus(step4Id, "running");
   const s4Start = Date.now();
 
   try {
     audioData = await generateAudio(articleData.body, runId);
     totalCostAce += audioData.costUsdc;
-    updateStepComplete(step4Id, {
+    await updateStepComplete(step4Id, {
       status: "complete",
       cost_usdc: audioData.costUsdc,
       tx_hash: audioData.txHash,
@@ -183,7 +183,7 @@ export async function runNewsForge(): Promise<void> {
     });
     console.log("Step 4 complete - Audio saved");
   } catch (error) {
-    updateStepComplete(step4Id, {
+    await updateStepComplete(step4Id, {
       status: "failed",
       cost_usdc: 0,
       tx_hash: "",
@@ -195,9 +195,9 @@ export async function runNewsForge(): Promise<void> {
   }
 
   const completedAt = new Date().toISOString();
-  updateRunComplete(runId, 0, totalCostAce, completedAt);
+  await updateRunComplete(runId, 0, totalCostAce, completedAt);
 
-  createOutput({
+  await createOutput({
     id: randomUUID(),
     run_id: runId,
     article_title: articleData?.title || "",
@@ -207,7 +207,7 @@ export async function runNewsForge(): Promise<void> {
     news_sources: JSON.stringify(newsData?.sources || []),
   });
 
-  updateRunStatus(runId, "complete");
+  await updateRunStatus(runId, "complete");
 
   console.log(`\nRun #${runNumber} complete!`);
   console.log(`Total ACE cost: $${totalCostAce.toFixed(6)}`);

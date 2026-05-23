@@ -1,20 +1,35 @@
 "use strict";
 
-const { mkdirSync } = require("node:fs");
+const fs = require("node:fs");
 const path = require("node:path");
-const Database = require("better-sqlite3");
+const { pathToFileURL } = require("node:url");
+const { createClient } = require("@libsql/client");
 const { SCHEMA } = require("./schema");
 
-const databasePath = path.resolve(
-  process.cwd(),
-  process.env.DATABASE_PATH ?? "./data/newsforge.db"
-);
+const DB_PATH = process.env.DATABASE_PATH || "./data/newsforge.db";
+const resolvedPath = path.resolve(DB_PATH);
 
-mkdirSync(path.dirname(databasePath), { recursive: true });
+const dataDir = path.dirname(resolvedPath);
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
 
-const db = new Database(databasePath);
+const db = createClient({
+  url: pathToFileURL(resolvedPath).href,
+});
 
-db.exec(SCHEMA);
+async function initSchema() {
+  const statements = SCHEMA.split(";")
+    .map((statement) => statement.trim())
+    .filter((statement) => statement.length > 0);
+
+  for (const statement of statements) {
+    await db.execute(statement);
+  }
+}
+
+const dbReady = initSchema().catch(console.error);
 
 module.exports = db;
 module.exports.default = db;
+module.exports.dbReady = dbReady;

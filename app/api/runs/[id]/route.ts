@@ -1,27 +1,16 @@
-import { NextResponse } from 'next/server';
-import path from 'path';
-import fs from 'fs';
-import Database from 'better-sqlite3';
+import { createClient } from "@libsql/client";
+import { NextResponse } from "next/server";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-function openDb() {
-  const dbPath = process.env.DATABASE_PATH
-    ? path.resolve(process.env.DATABASE_PATH)
-    : path.join(process.cwd(), 'data', 'newsforge.db');
+function getDb() {
+  const dbPath = path.resolve(
+    process.env.DATABASE_PATH || "./data/newsforge.db"
+  );
 
-  console.log('[db] opening:', dbPath);
-
-  if (!fs.existsSync(dbPath)) {
-    console.log('[db] file not found:', dbPath);
-    return null;
-  }
-  try {
-    return new Database(dbPath, { readonly: true, fileMustExist: true });
-  } catch (err: any) {
-    console.log('[db] error:', err.message);
-    return null;
-  }
+  return createClient({ url: pathToFileURL(dbPath).href });
 }
 
 export async function GET(
@@ -29,40 +18,43 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const db = openDb();
-    if (!db) {
-      return NextResponse.json(
-        { data: null, error: null },
-        { status: 200 }
-      );
-    }
+    const db = getDb();
 
-    const run = db.prepare(
-      'SELECT * FROM runs WHERE id = ?'
-    ).get(params.id);
+    const runResult = await db.execute({
+      sql: `SELECT * FROM runs WHERE id = ?`,
+      args: [params.id],
+    });
+    const run = runResult.rows[0] || null;
 
     if (!run) {
       return NextResponse.json(
-        { data: null, error: 'Not found' },
+        { data: null, error: "Not found" },
         { status: 404 }
       );
     }
 
-    const steps = db.prepare(
-      'SELECT * FROM steps WHERE run_id = ? ORDER BY step_number ASC'
-    ).all(params.id);
+    const stepsResult = await db.execute({
+      sql: `SELECT * FROM steps
+        WHERE run_id = ?
+        ORDER BY step_number ASC`,
+      args: [params.id],
+    });
 
-    const output = db.prepare(
-      'SELECT * FROM outputs WHERE run_id = ?'
-    ).get(params.id);
-    db.close();
+    const outputResult = await db.execute({
+      sql: `SELECT * FROM outputs WHERE run_id = ?`,
+      args: [params.id],
+    });
 
     return NextResponse.json({
-      data: { run, steps, output },
+      data: {
+        run,
+        steps: stepsResult.rows,
+        output: outputResult.rows[0] || null,
+      },
       error: null,
     });
   } catch (err: any) {
-    console.error('[api/runs/[id]]', err.message);
+    console.error("[api/runs/[id]]", err.message);
     return NextResponse.json(
       { data: null, error: err.message },
       { status: 500 }

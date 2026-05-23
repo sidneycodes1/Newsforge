@@ -1,17 +1,31 @@
-import { mkdirSync } from "node:fs";
+import { createClient } from "@libsql/client";
+import fs from "node:fs";
 import path from "node:path";
-import Database from "better-sqlite3";
+import { pathToFileURL } from "node:url";
 import { SCHEMA } from "./schema";
 
-const databasePath = path.resolve(
-  process.cwd(),
-  process.env.DATABASE_PATH ?? "./data/newsforge.db"
-);
+const DB_PATH = process.env.DATABASE_PATH || "./data/newsforge.db";
+const resolvedPath = path.resolve(DB_PATH);
 
-mkdirSync(path.dirname(databasePath), { recursive: true });
+const dataDir = path.dirname(resolvedPath);
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
 
-const db = new Database(databasePath);
+const db = createClient({
+  url: pathToFileURL(resolvedPath).href,
+});
 
-db.exec(SCHEMA);
+async function initSchema() {
+  const statements = SCHEMA.split(";")
+    .map((statement) => statement.trim())
+    .filter((statement) => statement.length > 0);
+
+  for (const statement of statements) {
+    await db.execute(statement);
+  }
+}
+
+export const dbReady = initSchema().catch(console.error);
 
 export default db;

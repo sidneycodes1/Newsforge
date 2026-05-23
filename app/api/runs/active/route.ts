@@ -1,67 +1,49 @@
-import { NextResponse } from 'next/server';
-import path from 'path';
-import fs from 'fs';
-import Database from 'better-sqlite3';
+import { createClient } from "@libsql/client";
+import { NextResponse } from "next/server";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-function openDb() {
-  const dbPath = process.env.DATABASE_PATH
-    ? path.resolve(process.env.DATABASE_PATH)
-    : path.join(process.cwd(), 'data', 'newsforge.db');
+function getDb() {
+  const dbPath = path.resolve(
+    process.env.DATABASE_PATH || "./data/newsforge.db"
+  );
 
-  console.log('[db] opening:', dbPath);
-
-  if (!fs.existsSync(dbPath)) {
-    console.log('[db] file not found:', dbPath);
-    return null;
-  }
-  try {
-    return new Database(dbPath, { readonly: true, fileMustExist: true });
-  } catch (err: any) {
-    console.log('[db] error:', err.message);
-    return null;
-  }
+  return createClient({ url: pathToFileURL(dbPath).href });
 }
 
 export async function GET() {
   try {
-    const db = openDb();
-    if (!db) {
-      return NextResponse.json(
-        { data: null, error: null },
-        {
-          status: 200,
-          headers: { 'Cache-Control': 'no-store' },
-        }
-      );
-    }
-
-    const run = db.prepare(
-      "SELECT * FROM runs WHERE status = 'running' ORDER BY started_at DESC LIMIT 1"
-    ).get();
+    const db = getDb();
+    const runResult = await db.execute({
+      sql: `SELECT * FROM runs
+        WHERE status = 'running'
+        ORDER BY started_at DESC LIMIT 1`,
+      args: [],
+    });
+    const run = runResult.rows[0] || null;
 
     if (!run) {
       return NextResponse.json(
         { data: null, error: null },
-        {
-          status: 200,
-          headers: { 'Cache-Control': 'no-store' },
-        }
+        { headers: { "Cache-Control": "no-store" } }
       );
     }
 
-    const steps = db.prepare(
-      'SELECT * FROM steps WHERE run_id = ? ORDER BY step_number ASC'
-    ).all((run as any).id);
-    db.close();
+    const stepsResult = await db.execute({
+      sql: `SELECT * FROM steps
+        WHERE run_id = ?
+        ORDER BY step_number ASC`,
+      args: [run.id as string],
+    });
 
     return NextResponse.json(
-      { data: { run, steps }, error: null },
-      { headers: { 'Cache-Control': 'no-store' } }
+      { data: { run, steps: stepsResult.rows }, error: null },
+      { headers: { "Cache-Control": "no-store" } }
     );
   } catch (err: any) {
-    console.error('[api/runs/active]', err.message);
+    console.error("[api/runs/active]", err.message);
     return NextResponse.json(
       { data: null, error: err.message },
       { status: 500 }
