@@ -14,6 +14,34 @@ dirs.forEach(dir => {
   }
 });
 
+// Copy static files for standalone mode
+const staticSrc = path.join(process.cwd(), '.next', 'static');
+const staticDst = path.join(process.cwd(), '.next', 'standalone', '.next', 'static');
+const publicSrc = path.join(process.cwd(), 'public');
+const publicDst = path.join(process.cwd(), '.next', 'standalone', 'public');
+
+function copyDir(src, dst) {
+  if (!fs.existsSync(src)) return;
+  if (!fs.existsSync(dst)) {
+    fs.mkdirSync(dst, { recursive: true });
+  }
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const dstPath = path.join(dst, entry.name);
+    if (entry.isDirectory()) {
+      copyDir(srcPath, dstPath);
+    } else {
+      fs.copyFileSync(srcPath, dstPath);
+    }
+  }
+}
+
+console.log('Copying static files...');
+copyDir(staticSrc, staticDst);
+copyDir(publicSrc, publicDst);
+console.log('Static files copied.');
+
 console.log('=== NewsForge Starting on Railway ===');
 console.log('Working directory:', process.cwd());
 console.log('PORT:', process.env.PORT || '3000');
@@ -35,26 +63,20 @@ agent.on('exit', (code, signal) => {
   console.log('Agent exited:', code, signal);
 });
 
-// Start Next.js dashboard
+// Start Next.js standalone server
 console.log('Starting Next.js dashboard...');
-const dashboard = spawn('node', ['.next/standalone/server.js'], {
-  stdio: 'inherit',
-  env: {
-    ...process.env,
-    PORT: process.env.PORT || '3000',
-    HOSTNAME: '0.0.0.0',
-  },
-  cwd: process.cwd(),
-});
+const serverPath = path.join(process.cwd(), '.next', 'standalone', 'server.js');
 
-dashboard.on('error', (err) => {
-  console.error('Dashboard error:', err.message);
-  // Fallback to npm start if standalone fails
+// Check if standalone server exists
+if (!fs.existsSync(serverPath)) {
+  console.error('Standalone server not found at:', serverPath);
+  console.log('Falling back to npm start...');
   const fallback = spawn('npm', ['run', 'start'], {
     stdio: 'inherit',
     env: {
       ...process.env,
       PORT: process.env.PORT || '3000',
+      HOSTNAME: '0.0.0.0',
     },
     cwd: process.cwd(),
   });
@@ -62,23 +84,36 @@ dashboard.on('error', (err) => {
     agent.kill();
     process.exit(code || 0);
   });
-});
+} else {
+  const dashboard = spawn('node', [serverPath], {
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      PORT: process.env.PORT || '3000',
+      HOSTNAME: '0.0.0.0',
+    },
+    cwd: process.cwd(),
+  });
 
-dashboard.on('exit', (code) => {
-  console.log('Dashboard exited:', code);
-  agent.kill();
-  process.exit(code || 0);
-});
+  dashboard.on('error', (err) => {
+    console.error('Dashboard error:', err.message);
+    agent.kill();
+    process.exit(1);
+  });
+
+  dashboard.on('exit', (code) => {
+    console.log('Dashboard exited:', code);
+    agent.kill();
+    process.exit(code || 0);
+  });
+}
 
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down...');
   agent.kill('SIGTERM');
-  dashboard.kill('SIGTERM');
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
   agent.kill('SIGTERM');
-  dashboard.kill('SIGTERM');
   process.exit(0);
 });

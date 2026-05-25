@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
-const isWindows = process.platform === 'win32';
-
 const nextConfig = {
-  output: isWindows ? undefined : 'standalone',
+  output: 'standalone',
 };
 
 module.exports = nextConfig;
