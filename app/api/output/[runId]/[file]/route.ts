@@ -1,67 +1,72 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
-
 import { NextResponse } from "next/server";
+import fs from "node:fs";
+import path from "node:path";
 
 export const dynamic = "force-dynamic";
 
-type RouteContext = {
-  params: {
-    runId: string;
-    file: string;
-  };
-};
+export async function GET(
+  _request: Request,
+  { params }: { params: { runId: string; file: string } }
+) {
+  const { runId, file } = params;
 
-const OUTPUTS_ROOT = path.resolve(process.cwd(), "outputs");
-
-function getContentType(fileName: string) {
-  const extension = path.extname(fileName).toLowerCase();
-  switch (extension) {
-    case ".png":
-      return "image/png";
-    case ".mp3":
-      return "audio/mpeg";
-    case ".md":
-      return "text/markdown; charset=utf-8";
-    case ".json":
-      return "application/json; charset=utf-8";
-    default:
-      return "application/octet-stream";
+  // Sanitize inputs — prevent path traversal
+  if (file.includes("..") || file.includes("/") || runId.includes("..")) {
+    return new NextResponse("Not found", { status: 404 });
   }
-}
 
-export async function GET(_request: Request, context: RouteContext) {
-  try {
-    const { runId, file } = context.params;
-    const filePath = path.resolve(OUTPUTS_ROOT, runId, file);
+  const outputsDir = process.env.OUTPUTS_DIR || "./outputs";
 
-    if (!filePath.startsWith(OUTPUTS_ROOT + path.sep)) {
-      return new NextResponse("Not found", { status: 404 });
+  const possiblePaths = [
+    // Railway absolute path
+    path.join("/app/outputs", runId, file),
+    // Env var path (absolute or relative)
+    path.resolve(outputsDir, runId, file),
+    // Relative to cwd
+    path.join(process.cwd(), "outputs", runId, file),
+  ];
+
+  let filePath: string | null = null;
+  for (const candidate of possiblePaths) {
+    if (fs.existsSync(candidate)) {
+      filePath = candidate;
+      break;
     }
+  }
 
-    const data = readFileSync(filePath);
+  if (!filePath) {
+    console.log("[output] File not found:", {
+      runId,
+      file,
+      tried: possiblePaths,
+    });
+    return new NextResponse("Not found", { status: 404 });
+  }
+
+  try {
+    const content = fs.readFileSync(filePath);
+
+    // Detect content type
+    let contentType = "application/octet-stream";
     if (file === "cover.png") {
-      const preview = data.toString("utf-8", 0, 10);
-      const contentType = preview.trim().startsWith("<svg")
+      const preview = content.toString("utf-8", 0, 10);
+      contentType = preview.trim().startsWith("<svg")
         ? "image/svg+xml"
         : "image/png";
-      if (contentType === "image/svg+xml") {
-        return new NextResponse(data, {
-          headers: {
-            "Content-Type": contentType,
-            "Cache-Control": "public, max-age=3600",
-          },
-        });
-      }
+    } else if (file === "audio.mp3") {
+      contentType = "audio/mpeg";
+    } else if (file === "article.md") {
+      contentType = "text/markdown";
     }
 
-    return new NextResponse(data, {
+    return new NextResponse(content, {
       headers: {
-        "Content-Type": getContentType(file),
+        "Content-Type": contentType,
         "Cache-Control": "public, max-age=3600",
       },
     });
-  } catch {
-    return new NextResponse("Not found", { status: 404 });
+  } catch (err: any) {
+    console.error("[output] Read error:", err.message);
+    return new NextResponse("Error", { status: 500 });
   }
 }
