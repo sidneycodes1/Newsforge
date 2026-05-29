@@ -49,10 +49,18 @@ console.log('DATABASE_PATH:', process.env.DATABASE_PATH);
 
 // Start agent worker in background
 console.log('Starting agent worker...');
-const agent = spawn('npx', ['tsx', 'agent/index.ts'], {
-  stdio: 'inherit',
-  env: { ...process.env },
+const agent = spawn('node', ['agent/dist/index.js'], {
   cwd: process.cwd(),
+  stdio: 'inherit',
+  env: {
+    ...process.env,  // Inherit all parent env vars
+    NODE_ENV: 'production',
+    CRON_SCHEDULE: process.env.CRON_SCHEDULE || '0 9,18 * * *',
+    ACE_PLATFORM_TOKEN: process.env.ACE_PLATFORM_TOKEN,
+    DATABASE_PATH: process.env.DATABASE_PATH || '/app/data/newsforge.db',
+    OUTPUTS_DIR: process.env.OUTPUTS_DIR || '/app/outputs',
+    AGENT_TOPIC: process.env.AGENT_TOPIC || 'Solana ecosystem'
+  }
 });
 
 agent.on('error', (err) => {
