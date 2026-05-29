@@ -6,15 +6,17 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
+    "dev": "next dev frontend",
+    "build": "next build && npm run build:agent",
+    "start": "next start frontend",
+    "build:agent": "tsc --project tsconfig.agent.json",
+    "agent": "node agent/dist/runtime/runner.js",
+    "type-check": "tsc --noEmit",
+    "lint": "next lint frontend",
     "typecheck": "tsc --noEmit",
-    "agent": "npx tsx agent/index.ts",
-    "fix-covers": "npx tsx scripts/fix-old-covers.ts",
-    "test:ace": "npx tsx scripts/test-ace.ts",
-    "register": "echo SAP registration disabled. See scripts/register-agent.ts"
+    "fix-covers": "npx tsx scripts/maintenance/fix-old-covers.ts",
+    "test:ace": "npx tsx scripts/validation/test-ace.ts",
+    "register": "echo SAP registration disabled. See scripts/setup/register-agent.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.17.3",
