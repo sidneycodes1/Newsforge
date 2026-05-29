@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { Card } from "@/components/ui/card";
-import { formatDateOnly } from "@/lib/format";
+import { Card } from "@frontend/components/ui/card";
+import { formatDateOnly } from "@shared/utils/format";
 
 function getRunId(run: any) {
   return run.id;
@@ -55,13 +55,13 @@ export default function OutputGrid({ runs }: { runs: any[] }) {
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
       {runs.map((run) => {
         const cardTitle = getTitle(run);
 
         return (
-          <Link key={getRunId(run)} href={`/run/${getRunId(run)}`}>
-            <Card className="overflow-hidden transition-colors hover:border-[#444444] hover:bg-[#1A1A1A]">
+          <Link key={getRunId(run)} href={`/run/${getRunId(run)}`} className="block w-full">
+            <Card className="h-full overflow-hidden transition-colors hover:border-[#444444] hover:bg-[#1A1A1A]">
               <OutputImage src={`/api/output/${getRunId(run)}/cover.png`} title={cardTitle} />
               <div className="space-y-2 p-3">
                 <div

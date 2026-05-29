@@ -1,6 +1,6 @@
 import { CheckCircle2, Circle, Loader2, XCircle } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@shared/utils/cn";
 
 type StepStatus = "pending" | "running" | "complete" | "failed";
 
@@ -43,11 +43,11 @@ export default function PipelineStep({ step }: { step: any }) {
   return (
     <div
       className={cn(
-        "flex h-12 items-center border-b border-[#1A1A1A] px-4 transition-colors last:border-b-0",
+        "flex flex-col gap-2 border-b border-[#1A1A1A] px-4 py-3 transition-colors last:border-b-0 md:h-12 md:flex-row md:items-center md:gap-0 md:py-0",
         status === "running" && "bg-[#1A1A1A]"
       )}
     >
-      <div className="flex w-full items-center gap-4">
+      <div className="flex w-full flex-col gap-2 md:flex-row md:items-center md:gap-4">
         <div className="w-8 font-mono text-[11px] text-[#666666]">
           {String(getStepNumber(step)).padStart(2, "0")}
         </div>
@@ -55,10 +55,10 @@ export default function PipelineStep({ step }: { step: any }) {
           <StatusIcon status={status} />
           <div className="truncate text-[14px] text-[#F0F0F0]">{getStepName(step)}</div>
         </div>
-        <div className="min-w-[120px] text-right font-mono text-[11px] text-[#666666]">
+        <div className="min-w-0 text-left font-mono text-[11px] text-[#666666] md:min-w-[120px] md:text-right">
           {getApiUsed(step)}
         </div>
-        <div className="w-[130px] text-right font-mono text-[11px] text-[#22C55E]">
+        <div className="w-full text-left font-mono text-[11px] text-[#22C55E] md:w-[130px] md:text-right">
           {status === "complete" ? (costUsdc > 0 ? `$${costUsdc.toFixed(4)} USDC` : "Free") : ""}
         </div>
       </div>

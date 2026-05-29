@@ -1,15 +1,15 @@
 {
+  "extends": "./tsconfig.json",
   "compilerOptions": {
     "target": "ES2020",
     "module": "commonjs",
-    "lib": ["ES2020"],
-    "outDir": "./dist/agent",
-    "rootDir": "./",
-    "strict": true,
-    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "outDir": "agent/dist",
+    "rootDir": "agent/src",
     "skipLibCheck": true,
-    "resolveJsonModule": true
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
   },
-  "include": ["agent/**/*", "scripts/**/*", "lib/**/*"],
-  "exclude": ["node_modules", "app", "components"]
+  "include": ["agent/src/**/*"],
+  "exclude": ["node_modules"]
 }

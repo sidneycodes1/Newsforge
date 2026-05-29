@@ -1,13 +1,15 @@
-import { NextResponse } from 'next/server';
-import fs from 'fs';
+import { NextResponse } from "next/server";
 
-export const dynamic = 'force-dynamic';
+import { defaultSettings, readSettings, saveSettings } from "@frontend/server/settings";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const settings = await readSettings();
   return NextResponse.json({
     data: {
-      topic: process.env.AGENT_TOPIC || 'Solana ecosystem',
-      schedule: process.env.CRON_SCHEDULE || '*/15 * * * *',
+      topic: settings.topic,
+      schedule: settings.cronSchedule,
       aceConnected: !!process.env.ACE_PLATFORM_TOKEN,
     },
     error: null,
@@ -17,21 +19,10 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const config = {
-      topic: body.topic || 'Solana ecosystem',
-      schedule: body.schedule || '*/15 * * * *',
-      updatedAt: new Date().toISOString(),
-    };
-    try {
-      fs.mkdirSync('./data', { recursive: true });
-      fs.writeFileSync(
-        './data/config.json',
-        JSON.stringify(config, null, 2),
-        'utf-8'
-      );
-    } catch {
-      // ignore write errors on read-only filesystems
-    }
+    await saveSettings({
+      topic: body.topic || defaultSettings.topic,
+      schedule: body.schedule || defaultSettings.cronSchedule,
+    });
     return NextResponse.json({
       data: { success: true },
       error: null,

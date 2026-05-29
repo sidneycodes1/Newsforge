@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { formatDateTime } from "@/lib/format";
+import { Badge } from "@frontend/components/ui/badge";
+import { Card } from "@frontend/components/ui/card";
+import { Skeleton } from "@frontend/components/ui/skeleton";
+import { formatDateTime } from "@shared/utils/format";
 
 import ArticleView from "./ArticleView";
 import AudioPlayer from "./AudioPlayer";
@@ -14,8 +14,8 @@ import ExecutionLog from "./ExecutionLog";
 
 function DetailSkeleton() {
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,1fr)]">
-      <Card className="p-5">
+    <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(280px,0.9fr)] lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,1fr)] lg:gap-5">
+      <Card className="p-4 sm:p-5">
         <Skeleton className="h-8 w-3/4" />
         <Skeleton className="mt-4 h-80 w-full" />
         <div className="mt-4 space-y-3">
@@ -24,7 +24,7 @@ function DetailSkeleton() {
           <Skeleton className="h-4 w-10/12" />
         </div>
       </Card>
-      <Card className="p-5">
+      <Card className="p-4 sm:p-5">
         <Skeleton className="h-6 w-48" />
         <div className="mt-4 space-y-3">
           <Skeleton className="h-16 w-full" />
@@ -72,7 +72,7 @@ export default function RunDetailScreen({ id }: { id: string }) {
 
   if (loading) {
     return (
-      <div className="px-6 py-6">
+      <div className="px-4 py-4 sm:px-6 sm:py-6">
         <DetailSkeleton />
       </div>
     );
@@ -80,7 +80,7 @@ export default function RunDetailScreen({ id }: { id: string }) {
 
   if (error || !run) {
     return (
-      <div className="px-6 py-6">
+      <div className="px-4 py-4 sm:px-6 sm:py-6">
         <Card className="border-[#4d1c1c] bg-[#120D0D] p-5">
           <div className="font-mono text-[12px] text-[#EF4444]">Error State</div>
           <div className="mt-2 text-sm text-[#D8D8D8]">
@@ -102,8 +102,8 @@ export default function RunDetailScreen({ id }: { id: string }) {
     !String(output?.audio_path).includes("error");
 
   return (
-    <div className="min-h-screen px-6 py-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link href="/history" className="font-mono text-[12px] text-[#666666] hover:text-[#F5C518]">
           {"<- Back to History"}
         </Link>
@@ -112,25 +112,38 @@ export default function RunDetailScreen({ id }: { id: string }) {
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(340px,1fr)]">
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(280px,0.9fr)] lg:grid-cols-[minmax(0,1.5fr)_minmax(340px,1fr)] lg:gap-5">
         <div className="space-y-5">
           <ArticleView runId={id} run={run} output={output} />
           {(() => {
-            if (!hasAudio) {
+            if (hasAudio) {
               return (
-                <div className="mt-6 rounded-[6px] border border-[#222222] p-4 text-sm italic text-[#666666]">
-                  Audio summary not available for this run
+                <div className="mt-6">
+                  <p className="mb-2 font-mono text-xs uppercase tracking-wider text-[#666666]">
+                    Audio Summary
+                  </p>
+                  <p className="mb-2 text-sm text-[#666666]">{displayTitle}</p>
+                  <AudioPlayer src={`/api/output/${id}/audio.mp3`} />
+                </div>
+              );
+            }
+
+            if (output?.audio_text) {
+              return (
+                <div className="mt-6 rounded-[6px] border border-[#222222] p-4">
+                  <p className="mb-2 font-mono text-xs uppercase tracking-wider text-[#666666]">
+                    Audio Summary (generated as text):
+                  </p>
+                  <p className="text-sm text-[#D8D8D8]">
+                    {output.audio_text}
+                  </p>
                 </div>
               );
             }
 
             return (
-              <div className="mt-6">
-                <p className="mb-2 font-mono text-xs uppercase tracking-wider text-[#666666]">
-                  Audio Summary
-                </p>
-                <p className="mb-2 text-sm text-[#666666]">{displayTitle}</p>
-                <AudioPlayer src={`/api/output/${id}/audio.mp3`} />
+              <div className="mt-6 rounded-[6px] border border-[#222222] p-4 text-sm italic text-[#666666]">
+                Audio generation skipped (low tokens \u2014 focus on article content)
               </div>
             );
           })()}

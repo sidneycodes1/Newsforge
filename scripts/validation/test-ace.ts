@@ -11,7 +11,7 @@ async function testAll() {
   }
 
   const { fetchNews, writeArticle, generateImage, generateAudio } =
-    await import("../agent/services/ace");
+    await import("@agent/services/ace");
 
   const testRunId = "test-" + Date.now();
   const topic = "Solana ecosystem";

@@ -1,5 +1,5 @@
-import type { RunRecord, RunStep, RunStatus } from "./types";
-import { truncateMiddle } from "./format";
+import type { RunRecord, RunStep, RunStatus } from "@shared/types";
+import { truncateMiddle } from "@shared/utils/format";
 
 const now = Date.now();
 const MINUTE = 60_000;

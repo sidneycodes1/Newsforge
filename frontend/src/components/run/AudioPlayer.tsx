@@ -2,8 +2,8 @@
 
 import { type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
 
-import { Card } from "@/components/ui/card";
-import { formatCountdown } from "@/lib/format";
+import { Card } from "@frontend/components/ui/card";
+import { formatCountdown } from "@shared/utils/format";
 
 function formatTime(seconds: number) {
   return formatCountdown(seconds);

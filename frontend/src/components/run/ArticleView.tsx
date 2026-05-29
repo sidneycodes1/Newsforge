@@ -36,14 +36,14 @@ export default function ArticleView({
 
   return (
     <article>
-      <h1 className="mb-4 text-[24px] font-bold text-[#F0F0F0]">{title}</h1>
+      <h1 className="mb-4 text-[22px] font-bold text-[#F0F0F0] sm:text-[24px]">{title}</h1>
 
       <div className="mb-6 overflow-hidden rounded-[6px] border border-[#222222] bg-[#111111]">
         {!imageError ? (
           <img
             src={`/api/output/${runId}/cover.png`}
             alt={title}
-            className="w-full rounded-[6px] bg-[#111111] min-h-[200px] object-cover"
+            className="block h-auto w-full max-w-full rounded-[6px] bg-[#111111]"
             onError={(event) => {
               (event.currentTarget as HTMLImageElement).style.display = "none";
               setImageError(true);

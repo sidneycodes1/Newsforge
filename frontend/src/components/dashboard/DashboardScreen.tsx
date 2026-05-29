@@ -4,10 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bot } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { formatCountdown } from "@/lib/format";
+import { Button } from "@frontend/components/ui/button";
+import { Card } from "@frontend/components/ui/card";
+import { Skeleton } from "@frontend/components/ui/skeleton";
+import { formatCountdown } from "@shared/utils/format";
 
 import ActiveRunCard from "./ActiveRunCard";
 import CountdownTimer from "./CountdownTimer";
@@ -28,11 +28,11 @@ function getNextRunDate(schedule: string) {
 function DashboardSkeleton() {
   return (
     <div className="space-y-6">
-      <Card className="p-6">
+      <Card className="p-4 sm:p-6">
         <Skeleton className="h-6 w-40" />
         <Skeleton className="mt-5 h-[260px] w-full" />
       </Card>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, index) => (
           <Card key={index} className="overflow-hidden">
             <Skeleton className="h-[120px] w-full rounded-none" />
@@ -61,7 +61,7 @@ export default function DashboardScreen() {
   const nextRunAt = useMemo(() => getNextRunDate(schedule), [schedule]);
 
   const loadRuns = async () => {
-    const response = await fetch("/api/runs", { cache: "no-store" });
+    const response = await fetch("/api/runs?limit=50&page=1", { cache: "no-store" });
     const json = await response.json();
     if (!response.ok) {
       throw new Error(json.error ?? "Failed to load runs");
@@ -160,24 +160,30 @@ export default function DashboardScreen() {
 
   return (
     <div className="min-h-screen">
-      <div className="flex items-center justify-between border-b border-[#1A1A1A] px-6 py-4">
+      <div className="flex flex-col gap-3 border-b border-[#1A1A1A] px-4 py-4 sm:px-6 md:flex-row md:items-center md:justify-between">
         <div className="text-[20px] font-semibold text-[#F0F0F0]">Live Feed</div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
           <CountdownTimer nextRunAt={nextRunAt} />
-          <Button variant="ghost" size="sm" onClick={triggerNow} disabled={triggering}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full md:w-auto"
+            onClick={triggerNow}
+            disabled={triggering}
+          >
             Trigger Now
           </Button>
         </div>
       </div>
 
-      <div className="px-6 pt-6">
+      <div className="px-4 pt-4 sm:px-6 sm:pt-6">
         {loading ? (
           <DashboardSkeleton />
         ) : error ? (
           <Card className="border-[#4d1c1c] bg-[#120D0D] p-5">
             <div className="font-mono text-[12px] text-[#EF4444]">Error State</div>
             <div className="mt-2 text-sm text-[#D8D8D8]">{error}</div>
-            <Button className="mt-4" variant="ghost" onClick={refresh}>
+            <Button className="mt-4 w-full sm:w-auto" variant="ghost" onClick={refresh}>
               Retry
             </Button>
           </Card>

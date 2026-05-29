@@ -1,9 +1,9 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { SettingsRecord } from "./types";
+import type { SettingsRecord } from "@shared/types";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const CONFIG_PATH = path.join(DATA_DIR, "config.json");
+const CONFIG_DIR = path.join(process.cwd(), "config", "runtime");
+const CONFIG_PATH = path.join(CONFIG_DIR, "newsforge.json");
 
 const intervalToCron: Record<SettingsRecord["intervalLabel"], string> = {
   "15min": "*/15 * * * *",
@@ -17,6 +17,13 @@ const intervalToMinutes: Record<SettingsRecord["intervalLabel"], number> = {
   "30min": 30,
   "1hr": 60,
   "6hr": 360,
+};
+
+const cronToIntervalLabel: Record<string, SettingsRecord["intervalLabel"]> = {
+  "*/15 * * * *": "15min",
+  "*/30 * * * *": "30min",
+  "0 * * * *": "1hr",
+  "0 */6 * * *": "6hr",
 };
 
 export const defaultSettings: SettingsRecord = {
@@ -34,7 +41,10 @@ export const defaultSettings: SettingsRecord = {
 };
 
 function normalizeSettings(input: Partial<SettingsRecord>): SettingsRecord {
-  const intervalLabel = input.intervalLabel ?? defaultSettings.intervalLabel;
+  const intervalLabel =
+    input.intervalLabel ??
+    (input.cronSchedule ? cronToIntervalLabel[input.cronSchedule] : undefined) ??
+    defaultSettings.intervalLabel;
   return {
     ...defaultSettings,
     ...input,
@@ -49,26 +59,35 @@ export async function readSettings(): Promise<SettingsRecord> {
     const raw = await readFile(CONFIG_PATH, "utf8");
     return normalizeSettings(JSON.parse(raw) as Partial<SettingsRecord>);
   } catch {
-    await mkdir(DATA_DIR, { recursive: true });
+    await mkdir(CONFIG_DIR, { recursive: true });
     await writeFile(CONFIG_PATH, JSON.stringify(defaultSettings, null, 2), "utf8");
     return defaultSettings;
   }
 }
 
 export async function saveSettings(
-  partial: Partial<Pick<SettingsRecord, "intervalLabel" | "topic" | "synapseRpcEndpoint" | "agentName">>
+  partial: Partial<
+    Pick<SettingsRecord, "intervalLabel" | "topic" | "synapseRpcEndpoint" | "agentName"> & {
+      schedule?: string;
+    }
+  >
 ) {
   const current = await readSettings();
+  const intervalLabel =
+    partial.intervalLabel ??
+    (partial.schedule ? cronToIntervalLabel[partial.schedule] : undefined) ??
+    current.intervalLabel;
   const next: SettingsRecord = {
     ...current,
     ...partial,
-    cronSchedule: intervalToCron[partial.intervalLabel ?? current.intervalLabel],
+    intervalLabel,
+    cronSchedule: partial.schedule ?? intervalToCron[intervalLabel],
     nextRunAt: new Date(
-      Date.now() + intervalToMinutes[partial.intervalLabel ?? current.intervalLabel] * 60_000
+      Date.now() + intervalToMinutes[intervalLabel] * 60_000
     ).toISOString(),
   };
 
-  await mkdir(DATA_DIR, { recursive: true });
+  await mkdir(CONFIG_DIR, { recursive: true });
   await writeFile(CONFIG_PATH, JSON.stringify(next, null, 2), "utf8");
   return next;
 }

@@ -5,7 +5,9 @@ import {
   writeArticle,
   generateImage,
   generateAudio,
-} from "./services/ace";
+  getTokenUsage,
+  resetTokenUsage,
+} from "@agent/services/ace";
 import {
   createRun,
   updateRunStatus,
@@ -15,7 +17,7 @@ import {
   updateStepComplete,
   createOutput,
   getRuns,
-} from "./db/queries";
+} from "@agent/db/queries";
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -26,6 +28,7 @@ function toErrorMessage(error: unknown): string {
 }
 
 export async function runNewsForge(): Promise<void> {
+  resetTokenUsage();
   const runId = randomUUID();
   const topic = process.env.AGENT_TOPIC || "Solana ecosystem";
 
@@ -171,17 +174,54 @@ export async function runNewsForge(): Promise<void> {
   const s4Start = Date.now();
 
   try {
-    audioData = await generateAudio(articleData.body, runId);
-    totalCostAce += audioData.costUsdc;
-    await updateStepComplete(step4Id, {
-      status: "complete",
-      cost_usdc: audioData.costUsdc,
-      tx_hash: audioData.txHash,
-      duration_ms: Date.now() - s4Start,
-      output_ref: audioData.filePath,
-      completed_at: new Date().toISOString(),
-    });
-    console.log("Step 4 complete - Audio saved");
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    let skipAudio = false;
+
+    try {
+      const tokenStatusResponse = await fetch(`${apiBaseUrl}/api/token-status`);
+      if (tokenStatusResponse.ok) {
+        const tokenStatus = await tokenStatusResponse.json();
+        if (Number(tokenStatus?.tokens_remaining ?? 999) < 50) {
+          skipAudio = true;
+          console.log("[runner] Skipped audio generation \u2014 insufficient tokens, prioritizing article");
+        }
+      }
+    } catch (error) {
+      console.log("[runner] Token status fetch failed, using local token estimate");
+      if (getTokenUsage().total >= 175) {
+        skipAudio = true;
+        console.log("[runner] Local token estimate is high, skipping audio generation");
+      }
+    }
+
+    if (skipAudio) {
+      audioData = {
+        filePath: "",
+        txHash: "audio-skipped-low-tokens",
+        costUsdc: 0,
+      };
+      await updateStepComplete(step4Id, {
+        status: "complete",
+        cost_usdc: 0,
+        tx_hash: audioData.txHash,
+        duration_ms: Date.now() - s4Start,
+        output_ref: "Audio skipped due to low token balance.",
+        completed_at: new Date().toISOString(),
+      });
+      console.log("Step 4 complete - Audio skipped");
+    } else {
+      audioData = await generateAudio(articleData.body, runId);
+      totalCostAce += audioData.costUsdc;
+      await updateStepComplete(step4Id, {
+        status: "complete",
+        cost_usdc: audioData.costUsdc,
+        tx_hash: audioData.txHash,
+        duration_ms: Date.now() - s4Start,
+        output_ref: audioData.filePath,
+        completed_at: new Date().toISOString(),
+      });
+      console.log("Step 4 complete - Audio saved");
+    }
   } catch (error) {
     await updateStepComplete(step4Id, {
       status: "failed",
@@ -195,7 +235,16 @@ export async function runNewsForge(): Promise<void> {
   }
 
   const completedAt = new Date().toISOString();
-  await updateRunComplete(runId, 0, totalCostAce, completedAt);
+  const tokenState = getTokenUsage();
+  const tokenBreakdown = JSON.stringify(tokenState);
+  await updateRunComplete(
+    runId,
+    0,
+    totalCostAce,
+    completedAt,
+    tokenState.total,
+    tokenBreakdown
+  );
 
   await createOutput({
     id: randomUUID(),
@@ -203,7 +252,8 @@ export async function runNewsForge(): Promise<void> {
     article_title: articleData?.title || "",
     article_body: articleData?.body || "",
     image_path: imageData?.filePath || "",
-    audio_path: audioData?.filePath || "",
+    audio_path: audioData?.filePath || null,
+    audio_text: audioData?.textFallback || null,
     news_sources: JSON.stringify(newsData?.sources || []),
   });
 

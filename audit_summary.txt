@@ -1,0 +1,370 @@
+FILE: agent/src/db/client.js
+TYPE: Script
+SIZE: 36 lines
+DEPENDENCIES: node:fs, node:path, node:url, @libsql/client, ./schema
+---
+FILE: agent/src/db/client.ts
+TYPE: TypeScript
+SIZE: 56 lines
+DEPENDENCIES: @libsql/client, node:fs, node:path, node:url, ./schema
+---
+FILE: agent/src/db/queries.js
+TYPE: Script
+SIZE: 166 lines
+DEPENDENCIES: ./client
+---
+FILE: agent/src/db/queries.ts
+TYPE: TypeScript
+SIZE: 204 lines
+DEPENDENCIES: ./client
+---
+FILE: agent/src/db/schema.js
+TYPE: Script
+SIZE: 45 lines
+DEPENDENCIES: None
+---
+FILE: agent/src/db/schema.ts
+TYPE: TypeScript
+SIZE: 43 lines
+DEPENDENCIES: None
+---
+FILE: agent/src/index.ts
+TYPE: TypeScript
+SIZE: 101 lines
+DEPENDENCIES: node:fs, node:path, node-cron
+---
+FILE: agent/src/runtime/runner.ts
+TYPE: TypeScript
+SIZE: 266 lines
+DEPENDENCIES: node:crypto
+---
+FILE: agent/src/services/ace.ts
+TYPE: TypeScript
+SIZE: 938 lines
+DEPENDENCIES: axios, fs, path
+---
+FILE: agent/src/services/payment-sap.ts
+TYPE: TypeScript
+SIZE: 21 lines
+DEPENDENCIES: None
+---
+FILE: agent/src/services/payment-x402.ts
+TYPE: TypeScript
+SIZE: 20 lines
+DEPENDENCIES: None
+---
+FILE: agent/src/services/payment.ts
+TYPE: TypeScript
+SIZE: 2 lines
+DEPENDENCIES: None
+---
+FILE: agent/src/services/sap.ts
+TYPE: TypeScript
+SIZE: 2 lines
+DEPENDENCIES: None
+---
+FILE: agent/src/services/sentinel.ts
+TYPE: TypeScript
+SIZE: 19 lines
+DEPENDENCIES: None
+---
+FILE: agent/src/types/node-cron.d.ts
+TYPE: TypeScript
+SIZE: 14 lines
+DEPENDENCIES: None
+---
+FILE: agent/src/utils/logger.ts
+TYPE: TypeScript
+SIZE: 2 lines
+DEPENDENCIES: None
+---
+FILE: config/runtime/newsforge.json
+TYPE: Config/Data
+SIZE: 5 lines
+DEPENDENCIES: None
+---
+FILE: data/config.json
+TYPE: Config/Data
+SIZE: 5 lines
+DEPENDENCIES: None
+---
+FILE: frontend/next-env.d.ts
+TYPE: TypeScript
+SIZE: 6 lines
+DEPENDENCIES: None
+---
+FILE: frontend/next.config.js
+TYPE: Script
+SIZE: 5 lines
+DEPENDENCIES: None
+---
+FILE: frontend/src/app/api/output/[runId]/[file]/route.ts
+TYPE: TypeScript
+SIZE: 73 lines
+DEPENDENCIES: next/server, node:fs, node:path
+---
+FILE: frontend/src/app/api/runs/active/route.ts
+TYPE: TypeScript
+SIZE: 53 lines
+DEPENDENCIES: @libsql/client, next/server, node:path, node:url
+---
+FILE: frontend/src/app/api/runs/route.ts
+TYPE: TypeScript
+SIZE: 119 lines
+DEPENDENCIES: @libsql/client, next/server, node:path, node:url
+---
+FILE: frontend/src/app/api/runs/[id]/route.ts
+TYPE: TypeScript
+SIZE: 64 lines
+DEPENDENCIES: @libsql/client, next/server, node:path, node:url
+---
+FILE: frontend/src/app/api/settings/route.ts
+TYPE: TypeScript
+SIZE: 37 lines
+DEPENDENCIES: next/server, @frontend/server/settings
+---
+FILE: frontend/src/app/api/token-status/route.ts
+TYPE: TypeScript
+SIZE: 50 lines
+DEPENDENCIES: @libsql/client, next/server, node:path, node:url
+---
+FILE: frontend/src/app/api/trigger/route.ts
+TYPE: TypeScript
+SIZE: 25 lines
+DEPENDENCIES: next/server, fs
+---
+FILE: frontend/src/app/history/page.tsx
+TYPE: React Component
+SIZE: 6 lines
+DEPENDENCIES: @frontend/components/history/HistoryScreen
+---
+FILE: frontend/src/app/layout.tsx
+TYPE: React Component
+SIZE: 30 lines
+DEPENDENCIES: react, @frontend/components/layout/Sidebar
+---
+FILE: frontend/src/app/page.tsx
+TYPE: React Component
+SIZE: 40 lines
+DEPENDENCIES: react, @frontend/components/dashboard/DashboardScreen
+---
+FILE: frontend/src/app/run/[id]/page.tsx
+TYPE: React Component
+SIZE: 10 lines
+DEPENDENCIES: @frontend/components/run/RunDetailScreen
+---
+FILE: frontend/src/app/settings/page.tsx
+TYPE: React Component
+SIZE: 2 lines
+DEPENDENCIES: None
+---
+FILE: frontend/src/components/dashboard/ActiveRunCard.tsx
+TYPE: React Component
+SIZE: 92 lines
+DEPENDENCIES: @frontend/components/ui/card, @shared/utils/format, ./PipelineStep
+---
+FILE: frontend/src/components/dashboard/CountdownTimer.tsx
+TYPE: React Component
+SIZE: 59 lines
+DEPENDENCIES: react
+---
+FILE: frontend/src/components/dashboard/DashboardScreen.tsx
+TYPE: React Component
+SIZE: 234 lines
+DEPENDENCIES: react, next/navigation, lucide-react, @frontend/components/ui/button, @frontend/components/ui/card, @frontend/components/ui/skeleton, @shared/utils/format, ./ActiveRunCard, ./CountdownTimer, ./OutputGrid
+---
+FILE: frontend/src/components/dashboard/OutputGrid.tsx
+TYPE: React Component
+SIZE: 89 lines
+DEPENDENCIES: next/link, react, @frontend/components/ui/card, @shared/utils/format
+---
+FILE: frontend/src/components/dashboard/PipelineStep.tsx
+TYPE: React Component
+SIZE: 68 lines
+DEPENDENCIES: lucide-react, @shared/utils/cn
+---
+FILE: frontend/src/components/history/HistoryScreen.tsx
+TYPE: React Component
+SIZE: 18 lines
+DEPENDENCIES: ./RunsTable
+---
+FILE: frontend/src/components/history/RunsTable.tsx
+TYPE: React Component
+SIZE: 411 lines
+DEPENDENCIES: react, next/navigation, @frontend/components/ui/badge, @frontend/components/ui/button, @frontend/components/ui/card, @frontend/components/ui/input, @frontend/components/ui/select, @shared/utils/format
+---
+FILE: frontend/src/components/layout/Sidebar.tsx
+TYPE: React Component
+SIZE: 113 lines
+DEPENDENCIES: next/link, react, next/navigation, lucide-react, @shared/utils/cn
+---
+FILE: frontend/src/components/layout/TopBar.tsx
+TYPE: React Component
+SIZE: 32 lines
+DEPENDENCIES: react, @shared/utils/cn
+---
+FILE: frontend/src/components/run/ArticleView.tsx
+TYPE: React Component
+SIZE: 80 lines
+DEPENDENCIES: react
+---
+FILE: frontend/src/components/run/AudioPlayer.tsx
+TYPE: React Component
+SIZE: 131 lines
+DEPENDENCIES: react, @frontend/components/ui/card, @shared/utils/format
+---
+FILE: frontend/src/components/run/ExecutionLog.tsx
+TYPE: React Component
+SIZE: 135 lines
+DEPENDENCIES: react, lucide-react, @frontend/components/ui/button, @frontend/components/ui/card, @shared/utils/format
+---
+FILE: frontend/src/components/run/RunDetailScreen.tsx
+TYPE: React Component
+SIZE: 184 lines
+DEPENDENCIES: next/link, react, @frontend/components/ui/badge, @frontend/components/ui/card, @frontend/components/ui/skeleton, @shared/utils/format, ./ArticleView, ./AudioPlayer, ./ExecutionLog
+---
+FILE: frontend/src/components/settings/SettingsScreen.tsx
+TYPE: React Component
+SIZE: 210 lines
+DEPENDENCIES: react, @frontend/components/ui/button, @frontend/components/ui/card, @frontend/components/ui/input, @frontend/components/ui/select, @frontend/components/ui/skeleton
+---
+FILE: frontend/src/components/ui/badge.tsx
+TYPE: React Component
+SIZE: 26 lines
+DEPENDENCIES: react, @shared/utils/cn
+---
+FILE: frontend/src/components/ui/button.tsx
+TYPE: React Component
+SIZE: 36 lines
+DEPENDENCIES: react, @shared/utils/cn
+---
+FILE: frontend/src/components/ui/card.tsx
+TYPE: React Component
+SIZE: 15 lines
+DEPENDENCIES: react, @shared/utils/cn
+---
+FILE: frontend/src/components/ui/input.tsx
+TYPE: React Component
+SIZE: 15 lines
+DEPENDENCIES: react, @shared/utils/cn
+---
+FILE: frontend/src/components/ui/select.tsx
+TYPE: React Component
+SIZE: 15 lines
+DEPENDENCIES: react, @shared/utils/cn
+---
+FILE: frontend/src/components/ui/skeleton.tsx
+TYPE: React Component
+SIZE: 6 lines
+DEPENDENCIES: @shared/utils/cn
+---
+FILE: frontend/src/components/ui/textarea.tsx
+TYPE: React Component
+SIZE: 15 lines
+DEPENDENCIES: react, @shared/utils/cn
+---
+FILE: frontend/src/lib/demo-data.ts
+TYPE: TypeScript
+SIZE: 432 lines
+DEPENDENCIES: @shared/types, @shared/utils/format
+---
+FILE: frontend/src/server/db/readonly.js
+TYPE: Script
+SIZE: 33 lines
+DEPENDENCIES: node:fs, node:path, node:url, @libsql/client
+---
+FILE: frontend/src/server/settings.ts
+TYPE: TypeScript
+SIZE: 98 lines
+DEPENDENCIES: node:fs/promises, node:path, @shared/types
+---
+FILE: frontend/tailwind.config.ts
+TYPE: TypeScript
+SIZE: 51 lines
+DEPENDENCIES: tailwindcss
+---
+FILE: frontend/tsconfig.json
+TYPE: Config/Data
+SIZE: 52 lines
+DEPENDENCIES: None
+---
+FILE: next-env.d.ts
+TYPE: TypeScript
+SIZE: 6 lines
+DEPENDENCIES: None
+---
+FILE: next.config.js
+TYPE: Script
+SIZE: 9 lines
+DEPENDENCIES: None
+---
+FILE: package.json
+TYPE: Config/Data
+SIZE: 46 lines
+DEPENDENCIES: None
+---
+FILE: railway-start.js
+TYPE: Script
+SIZE: 120 lines
+DEPENDENCIES: child_process, fs, path
+---
+FILE: railway.json
+TYPE: Config/Data
+SIZE: 15 lines
+DEPENDENCIES: None
+---
+FILE: run_audit.js
+TYPE: Script
+SIZE: 55 lines
+DEPENDENCIES: fs, path
+---
+FILE: scripts/maintenance/fix-old-covers.ts
+TYPE: TypeScript
+SIZE: 90 lines
+DEPENDENCIES: fs, path, dotenv
+---
+FILE: scripts/setup/register-agent.ts
+TYPE: TypeScript
+SIZE: 5 lines
+DEPENDENCIES: None
+---
+FILE: scripts/validation/test-ace.ts
+TYPE: TypeScript
+SIZE: 77 lines
+DEPENDENCIES: dotenv
+---
+FILE: shared/types/index.ts
+TYPE: TypeScript
+SIZE: 56 lines
+DEPENDENCIES: None
+---
+FILE: shared/utils/cn.ts
+TYPE: TypeScript
+SIZE: 4 lines
+DEPENDENCIES: None
+---
+FILE: shared/utils/format.ts
+TYPE: TypeScript
+SIZE: 55 lines
+DEPENDENCIES: None
+---
+FILE: tailwind.config.ts
+TYPE: TypeScript
+SIZE: 50 lines
+DEPENDENCIES: tailwindcss
+---
+FILE: tsconfig.agent.json
+TYPE: Config/Data
+SIZE: 16 lines
+DEPENDENCIES: None
+---
+FILE: tsconfig.json
+TYPE: Config/Data
+SIZE: 52 lines
+DEPENDENCIES: None
+---
+FILE: vercel.json
+TYPE: Config/Data
+SIZE: 12 lines
+DEPENDENCIES: None
+---

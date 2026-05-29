@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@frontend/components/ui/button";
+import { Card } from "@frontend/components/ui/card";
+import { Input } from "@frontend/components/ui/input";
+import { Select } from "@frontend/components/ui/select";
+import { Skeleton } from "@frontend/components/ui/skeleton";
 
 function Toast({
   message,

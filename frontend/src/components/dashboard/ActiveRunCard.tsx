@@ -1,7 +1,7 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
-import { formatDateTime, formatUSDC } from "@/lib/format";
+import { Card } from "@frontend/components/ui/card";
+import { formatDateTime, formatUSDC } from "@shared/utils/format";
 
 import PipelineStep from "./PipelineStep";
 
@@ -59,9 +59,9 @@ export default function ActiveRunCard({ run, steps }: { run: any; steps: any[] }
   );
 
   return (
-    <Card className="border-[#222222] bg-[#111111] p-6 transition-colors hover:border-[#444444] hover:bg-[#1A1A1A]">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+    <Card className="border-[#222222] bg-[#111111] p-4 transition-colors hover:border-[#444444] hover:bg-[#1A1A1A] sm:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
           <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#F97316] animate-pulse" />
           <div className="font-mono text-[14px] text-[#F0F0F0]">
             Run #{getRunNumber(run)} - In Progress
@@ -81,7 +81,7 @@ export default function ActiveRunCard({ run, steps }: { run: any; steps: any[] }
         ))}
       </div>
 
-      <div className="mt-4 flex justify-end font-mono text-[12px] text-[#22C55E]">
+      <div className="mt-4 flex justify-start font-mono text-[12px] text-[#22C55E] sm:justify-end">
         {aceTotal > 0
           ? `Total paid: ${formatUSDC(aceTotal)} (ACE free credits)`
           : "Total cost: Free credits"}

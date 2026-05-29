@@ -7,7 +7,12 @@ async function bootstrap() {
   dotenv.default.config({ path: ".env.local" });
   dotenv.default.config({ path: ".env" });
 
-  const configPath = path.join(process.cwd(), "config.json");
+  const configPath = path.join(
+    process.cwd(),
+    "config",
+    "runtime",
+    "newsforge.json"
+  );
   try {
     const raw = fs.readFileSync(configPath, "utf8");
     const config = JSON.parse(raw) as {
@@ -26,10 +31,10 @@ async function bootstrap() {
     // No persisted config yet; fall back to env vars.
   }
 
-  const { runNewsForge } = await import("./runner");
-  const { default: db } = await import("./db/client");
+  const { runNewsForge } = await import("@agent/runtime/runner");
+  const { default: db } = await import("@agent/db/client");
 
-  const CRON_SCHEDULE = process.env.CRON_SCHEDULE || "*/30 * * * *";
+  const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '0 9,18 * * *';
   const triggerFlagPath = path.join(process.cwd(), "data", "trigger.flag");
 
   console.log("🤖 NewsForge Agent started");

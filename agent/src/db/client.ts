@@ -24,6 +24,30 @@ async function initSchema() {
   for (const statement of statements) {
     await db.execute(statement);
   }
+
+  try {
+    await db.execute(`ALTER TABLE runs ADD COLUMN tokens_used INTEGER DEFAULT 0`);
+  } catch (error) {
+    if (!String(error).toLowerCase().includes("duplicate column")) {
+      throw error;
+    }
+  }
+
+  try {
+    await db.execute(`ALTER TABLE runs ADD COLUMN token_breakdown TEXT`);
+  } catch (error) {
+    if (!String(error).toLowerCase().includes("duplicate column")) {
+      throw error;
+    }
+  }
+
+  try {
+    await db.execute(`ALTER TABLE outputs ADD COLUMN audio_text TEXT`);
+  } catch (error) {
+    if (!String(error).toLowerCase().includes("duplicate column")) {
+      throw error;
+    }
+  }
 }
 
 export const dbReady = initSchema().catch(console.error);

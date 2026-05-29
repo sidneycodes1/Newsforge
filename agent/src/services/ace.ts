@@ -6,6 +6,31 @@ const TOKEN = process.env.ACE_PLATFORM_TOKEN || "";
 const OUTPUTS_DIR = process.env.OUTPUTS_DIR || "./outputs";
 const BASE_URL = "https://api.acedata.cloud";
 
+interface CacheEntry {
+  summary: string;
+  timestamp: number;
+  ttl: number;
+}
+
+interface TokenUsage {
+  news: number;
+  article: number;
+  image: number;
+  audio: number;
+  total: number;
+}
+
+const articleCache = new Map<string, CacheEntry>();
+const CACHE_TTL = 24 * 60 * 60 * 1000;
+
+const tokenUsage: TokenUsage = {
+  news: 0,
+  article: 0,
+  image: 0,
+  audio: 0,
+  total: 0,
+};
+
 type NewsResultItem = {
   title?: string;
   headline?: string;
@@ -23,6 +48,62 @@ type RequestAttempt = {
   params?: Record<string, unknown>;
   responseType?: "json" | "arraybuffer";
 };
+
+function getCacheKey(title: string, topic: string): string {
+  return `${title}::${topic}`;
+}
+
+function isCacheValid(entry: CacheEntry): boolean {
+  return Date.now() - entry.timestamp < entry.ttl;
+}
+
+function getCachedArticle(title: string, topic: string): string | null {
+  const key = getCacheKey(title, topic);
+  const entry = articleCache.get(key);
+  if (entry && isCacheValid(entry)) {
+    console.log("[Cache] Hit for:", key);
+    return entry.summary;
+  }
+  if (entry) {
+    articleCache.delete(key);
+  }
+  return null;
+}
+
+function setCachedArticle(title: string, topic: string, summary: string): void {
+  const key = getCacheKey(title, topic);
+  articleCache.set(key, { summary, timestamp: Date.now(), ttl: CACHE_TTL });
+  console.log("[Cache] Stored:", key);
+}
+
+function recordTokenUsage(kind: keyof Omit<TokenUsage, "total">, value: number) {
+  const nextValue = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+  tokenUsage[kind] += nextValue;
+  tokenUsage.total = tokenUsage.news + tokenUsage.article + tokenUsage.image + tokenUsage.audio;
+  console.log(`[tokens] ${kind}:`, tokenUsage[kind]);
+  console.log("[tokens] total:", tokenUsage.total);
+}
+
+export function resetTokenUsage() {
+  tokenUsage.news = 0;
+  tokenUsage.article = 0;
+  tokenUsage.image = 0;
+  tokenUsage.audio = 0;
+  tokenUsage.total = 0;
+}
+
+export function getTokenUsage(): TokenUsage {
+  return { ...tokenUsage };
+}
+
+function estimateTokensFromText(value: string) {
+  return Math.max(1, Math.ceil(value.length / 4));
+}
+
+function extractUsageTokens(response: AxiosResponse<unknown> | null) {
+  const usage = (response?.data as { usage?: { total_tokens?: number } } | undefined)?.usage;
+  return usage?.total_tokens ?? 0;
+}
 
 function authHeaders() {
   return {
@@ -301,6 +382,81 @@ function getBinarySize(data: unknown) {
   return 0;
 }
 
+function buildGoogleNewsRssUrl(topic: string) {
+  const query = encodeURIComponent(topic);
+  return `https://news.google.com/rss/search?q=${query}&hl=en-US&gl=US&ceid=US:en`;
+}
+
+function parseGoogleNewsRss(xml: string) {
+  const items = xml.match(/<item>[\s\S]*?<\/item>/g) ?? [];
+  return items
+    .map((item) => {
+      const read = (tag: string) => {
+        const match = item.match(new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`));
+        return match?.[1]?.replace(/<!\[CDATA\[|\]\]>/g, "").trim() ?? "";
+      };
+
+      return {
+        title: read("title"),
+        snippet: read("description"),
+        link: read("link"),
+      };
+    })
+    .filter((item) => item.title || item.link);
+}
+
+async function fetchGoogleNewsRss(topic: string) {
+  const url = buildGoogleNewsRssUrl(topic);
+  const response = await axios.get<string>(url, { responseType: "text", timeout: 15000 });
+  const items = parseGoogleNewsRss(response.data);
+  recordTokenUsage("news", Math.min(20, Math.max(1, estimateTokensFromText(topic))));
+
+  return {
+    headlines: items.map((item) => item.title).filter(Boolean),
+    snippets: items.map((item) => item.snippet).filter(Boolean),
+    sources: items.map((item) => item.link).filter(Boolean),
+    txHash: freeTxHash(),
+    costUsdc: 0,
+  };
+}
+
+async function fetchSerpApi(topic: string, url = "https://api.acedata.cloud/serp/google") {
+  const res = await axios.post(
+    url,
+    {
+      query: `${topic} latest news`,
+      num: 5,
+      gl: "us",
+      hl: "en",
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      timeout: 15000,
+    }
+  );
+
+  const items =
+    (res.data as any)?.data?.organic_results ||
+    (res.data as any)?.organic_results ||
+    (res.data as any)?.results ||
+    (res.data as any)?.data ||
+    [];
+
+  const response = {
+    headlines: Array.isArray(items) ? items.map((r: any) => r.title || r.headline || "").filter(Boolean) : [],
+    snippets: Array.isArray(items) ? items.map((r: any) => r.snippet || r.description || "").filter(Boolean) : [],
+    sources: Array.isArray(items) ? items.map((r: any) => r.link || r.url || "").filter(Boolean) : [],
+    txHash: freeTxHash(),
+    costUsdc: 0,
+  };
+
+  recordTokenUsage("news", Math.min(30, Math.max(1, estimateTokensFromText(JSON.stringify(items).slice(0, 200)))));
+  return response;
+}
+
 export async function fetchNews(
   topic: string,
   runId: string
@@ -311,67 +467,41 @@ export async function fetchNews(
   txHash: string;
   costUsdc: number;
 }> {
-  console.log("[ACE] Calling fetchNews...");
+  console.log("[fetchNews] Fetching news for:", topic);
   console.log("[ACE] Token:", TOKEN ? "set" : "MISSING");
 
-  const serpUrls = [
-    "https://api.acedata.cloud/serp/google",
-    "https://api.acedata.cloud/serp/google/search",
-  ];
-
-  for (const url of serpUrls) {
-    try {
-      console.log("[ACE] URL:", url);
-      const res = await axios.post(
-        url,
-        {
-          query: `${topic} latest news`,
-          num: 5,
-          gl: "us",
-          hl: "en",
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${TOKEN}`,
-            "Content-Type": "application/json",
-          },
-          timeout: 15000,
-        }
-      );
-      console.log("[ACE] fetchNews response status:", res.status);
-      console.log("[ACE] fetchNews response keys:", Object.keys(res.data || {}));
-
-      const items =
-        (res.data as any)?.data?.organic_results ||
-        (res.data as any)?.organic_results ||
-        (res.data as any)?.results ||
-        (res.data as any)?.data ||
-        [];
-
-      if (Array.isArray(items) && items.length > 0) {
-        return {
-          headlines: items.map((r: any) => r.title || r.headline || ""),
-          snippets: items.map((r: any) => r.snippet || r.description || ""),
-          sources: items.map((r: any) => r.link || r.url || ""),
-          txHash: "free-credit-" + Date.now(),
-          costUsdc: 0,
-        };
-      }
-
-      console.log("[ACE] fetchNews: empty results from", url);
-    } catch (e: any) {
-      console.log("[ACE] fetchNews failed:", url, e.response?.status || e.message);
-      if (e.response?.data) {
-        console.log(
-          "[ACE] fetchNews error body:",
-          JSON.stringify(e.response.data).slice(0, 200)
-        );
-      }
+  try {
+    console.log("[fetchNews] Trying Google News RSS (free)...");
+    const freeResults = await fetchGoogleNewsRss(topic);
+    if (freeResults.headlines.length > 0) {
+      console.log("[fetchNews] Got", freeResults.headlines.length, "results from free source");
+      return {
+        ...freeResults,
+        headlines: freeResults.headlines.slice(0, 5),
+        snippets: freeResults.snippets.slice(0, 5),
+        sources: freeResults.sources.slice(0, 5),
+      };
     }
+  } catch (err) {
+    console.log("[fetchNews] Google News RSS failed, trying paid source...");
   }
 
-  console.log("[ACE] fetchNews: using fallback headlines");
-  return {
+  try {
+    console.log("[fetchNews] Trying SerpAPI (paid)...");
+    const serpResults = await fetchSerpApi(topic);
+    if (serpResults.headlines.length > 0) {
+      return {
+        ...serpResults,
+        headlines: serpResults.headlines.slice(0, 5),
+        snippets: serpResults.snippets.slice(0, 5),
+        sources: serpResults.sources.slice(0, 5),
+      };
+    }
+  } catch (err) {
+    console.log("[fetchNews] SerpAPI failed, using fallback headlines");
+  }
+
+  const fallback = {
     headlines: [
       `Latest developments in ${topic}`,
       `${topic} ecosystem growth continues`,
@@ -383,9 +513,11 @@ export async function fetchNews(
       `Innovation in ${topic} reaches new milestones.`,
     ],
     sources: [],
-    txHash: "free-credit-" + Date.now(),
+    txHash: freeTxHash(),
     costUsdc: 0,
   };
+  recordTokenUsage("news", 12);
+  return fallback;
 }
 
 export async function writeArticle(
@@ -406,20 +538,22 @@ export async function writeArticle(
 
   const dir = ensureRunDir(runId);
   const filePath = path.join(dir, "article.md");
-  const prompt = `Write a 400-word news article about "${topic}". Use these headlines as context: ${newsData.headlines
-    .slice(0, 3)
-    .join(". ")}.
+  const cacheTitle = newsData.headlines[0] || topic;
+  const cached = getCachedArticle(cacheTitle, topic);
+  if (cached) {
+    console.log("[writeArticle] Using cached summary");
+    fs.writeFileSync(filePath, cached, "utf-8");
+    const { title, body } = splitArticleContent(cached, topic);
+    return {
+      title,
+      body: body || cached,
+      filePath,
+      txHash: freeTxHash(),
+      costUsdc: 0,
+    };
+  }
 
-Format EXACTLY like this:
-TITLE: [your title here]
-
-[article paragraph 1]
-
-[article paragraph 2]
-
-[article paragraph 3]
-
-[article paragraph 4]`;
+  const prompt = `Summarize this news in 150 words. Include: headline, key facts, why it matters. Be direct and factual. Topic: ${topic}`;
 
   const response = await requestAttempt<unknown>("writeArticle", {
     method: "post",
@@ -432,8 +566,8 @@ TITLE: [your title here]
           content: prompt,
         },
       ],
-      max_tokens: 800,
-      temperature: 0.7,
+      max_tokens: 160,
+      temperature: 0.2,
     },
   });
 
@@ -446,6 +580,9 @@ TITLE: [your title here]
     const finalBody = body || fallbackBody;
 
     fs.writeFileSync(filePath, `# ${title}\n\n${finalBody}`, "utf-8");
+    setCachedArticle(cacheTitle, topic, `# ${title}\n\n${finalBody}`);
+    const tokens = extractUsageTokens(response) || estimateTokensFromText(content) + estimateTokensFromText(prompt);
+    recordTokenUsage("article", tokens);
 
     return {
       title,
@@ -457,6 +594,7 @@ TITLE: [your title here]
   } catch (error) {
     console.error("[ACE] writeArticle failed:", error);
     fs.writeFileSync(filePath, `# ${fallbackTitle}\n\n${fallbackBody}`, "utf-8");
+    recordTokenUsage("article", estimateTokensFromText(prompt));
     return {
       title: fallbackTitle,
       body: fallbackBody,
@@ -554,6 +692,7 @@ export async function generateImage(
         });
         fs.writeFileSync(filePath, Buffer.from(imgRes.data));
         console.log("[ACE] generateImage: saved real image");
+        recordTokenUsage("image", extractUsageTokens(res) || 18);
         return {
           filePath,
           txHash: "free-credit-" + Date.now(),
@@ -578,6 +717,7 @@ export async function generateImage(
 
   fs.writeFileSync(filePath, fallbackSvg, "utf-8");
   console.log("[ACE] generateImage: using dark SVG placeholder");
+  recordTokenUsage("image", 12);
   return {
     filePath,
     txHash: "free-credit-" + Date.now(),
@@ -590,6 +730,7 @@ export async function generateAudio(
   runId: string
 ): Promise<{
   filePath: string;
+  textFallback?: string;
   txHash: string;
   costUsdc: number;
 }> {
@@ -641,6 +782,7 @@ export async function generateAudio(
       if (audioRes.data.byteLength > 500) {
         fs.writeFileSync(filePath, Buffer.from(audioRes.data));
         console.log("[ACE] Fish TTS: audio saved");
+        recordTokenUsage("audio", extractUsageTokens(fishRes) || 20);
         return {
           filePath,
           txHash: "free-credit-" + Date.now(),
@@ -654,8 +796,7 @@ export async function generateAudio(
       for (let i = 0; i < 12; i++) {
         console.log("[ACE] Fish poll attempt", i + 1, "taskId:", taskId);
         await new Promise((r) => setTimeout(r, 3000));
-        const poll = await axios.get("https://api.acedata.cloud/fish/audios", {
-          params: { task_id: taskId },
+        const poll = await axios.get(`https://api.acedata.cloud/fish/audios/${taskId}`, {
           headers: { Authorization: `Bearer ${TOKEN}` },
           timeout: 10000,
         });
@@ -673,6 +814,7 @@ export async function generateAudio(
           });
           if (audioRes.data.byteLength > 500) {
             fs.writeFileSync(filePath, Buffer.from(audioRes.data));
+            recordTokenUsage("audio", extractUsageTokens(poll) || 16);
             return {
               filePath,
               txHash: "free-credit-" + Date.now(),
@@ -726,6 +868,7 @@ export async function generateAudio(
           });
           fs.writeFileSync(filePath, Buffer.from(audioRes.data));
           console.log("[ACE] generateAudio: saved audio");
+          recordTokenUsage("audio", extractUsageTokens(res) || 18);
           return {
             filePath,
             txHash: "free-credit-" + Date.now(),
@@ -756,6 +899,7 @@ export async function generateAudio(
               });
               fs.writeFileSync(filePath, Buffer.from(audioRes.data));
               console.log("[ACE] generateAudio: Suno complete");
+              recordTokenUsage("audio", extractUsageTokens(pollRes) || 16);
               return {
                 filePath,
                 txHash: "free-credit-" + Date.now(),
@@ -777,8 +921,16 @@ export async function generateAudio(
   }
 
   console.log("[ACE] generateAudio: all attempts failed");
+  recordTokenUsage("audio", 4);
+  
+  const textContent = `Audio Summary: ${articleBody.substring(0, 200)}...`;
+  const textFallbackPath = filePath.replace(".mp3", ".txt");
+  fs.writeFileSync(textFallbackPath, textContent, "utf-8");
+  console.log("[ACE] generateAudio: saved text fallback");
+
   return {
     filePath: "",
+    textFallback: textContent,
     txHash: "audio-skipped-" + Date.now(),
     costUsdc: 0,
   };

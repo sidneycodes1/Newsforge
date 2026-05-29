@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS runs (
   started_at   TEXT NOT NULL,
   completed_at TEXT,
   total_cost_ace  REAL DEFAULT 0,
+  tokens_used  INTEGER DEFAULT 0,
+  token_breakdown TEXT,
   error        TEXT
 );
 
@@ -32,6 +34,7 @@ CREATE TABLE IF NOT EXISTS outputs (
   article_body  TEXT,
   image_path    TEXT,
   audio_path    TEXT,
+  audio_text    TEXT,
   news_sources  TEXT
 );
 `;

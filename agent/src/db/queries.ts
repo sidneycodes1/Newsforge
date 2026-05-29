@@ -10,11 +10,20 @@ export async function createRun(run: {
   run_number: number;
   topic: string;
   started_at: string;
+  tokens_used?: number;
+  token_breakdown?: string | null;
 }): Promise<void> {
   await runQuery(
-    `INSERT INTO runs (id, run_number, topic, started_at)
-     VALUES (?, ?, ?, ?)`,
-    [run.id, run.run_number, run.topic, run.started_at]
+    `INSERT INTO runs (id, run_number, topic, started_at, tokens_used, token_breakdown)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      run.id,
+      run.run_number,
+      run.topic,
+      run.started_at,
+      run.tokens_used ?? 0,
+      run.token_breakdown ?? null,
+    ]
   );
 }
 
@@ -34,15 +43,19 @@ export async function updateRunComplete(
   id: string,
   _ignoredSapCost: number,
   total_cost_ace: number,
-  completed_at: string
+  completed_at: string,
+  tokens_used = 0,
+  token_breakdown: string | null = null
 ): Promise<void> {
   await runQuery(
     `UPDATE runs
      SET status = 'complete',
          total_cost_ace = ?,
-         completed_at = ?
+         completed_at = ?,
+         tokens_used = ?,
+         token_breakdown = ?
      WHERE id = ?`,
-    [total_cost_ace, completed_at, id]
+    [total_cost_ace, completed_at, tokens_used, token_breakdown, id]
   );
 }
 
@@ -105,12 +118,13 @@ export async function createOutput(output: {
   article_title: string;
   article_body: string;
   image_path: string;
-  audio_path: string;
+  audio_path: string | null;
+  audio_text?: string | null;
   news_sources: string;
 }): Promise<void> {
   await runQuery(
-    `INSERT INTO outputs (id, run_id, article_title, article_body, image_path, audio_path, news_sources)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO outputs (id, run_id, article_title, article_body, image_path, audio_path, audio_text, news_sources)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       output.id,
       output.run_id,
@@ -118,6 +132,7 @@ export async function createOutput(output: {
       output.article_body,
       output.image_path,
       output.audio_path,
+      output.audio_text ?? null,
       output.news_sources,
     ]
   );
