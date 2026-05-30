@@ -6,11 +6,9 @@ import { pathToFileURL } from "node:url";
 export const dynamic = "force-dynamic";
 
 function getDb() {
-  const dbPath = path.resolve(
-    process.env.DATABASE_PATH || "./data/newsforge.db"
-  );
-
-  return createClient({ url: pathToFileURL(dbPath).href });
+  const dbPath = process.env.DATABASE_PATH || path.resolve(process.cwd(), '..', 'data', 'newsforge.db');
+  console.log('[DB] Connecting to:', dbPath);
+  return createClient({ url: `file:${dbPath}` });
 }
 
 function toInt(value: string | null, fallback: number) {

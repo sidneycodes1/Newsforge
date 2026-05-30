@@ -5,10 +5,7 @@ const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 const { createClient } = require("@libsql/client");
 
-const databasePath = path.resolve(
-  process.cwd(),
-  process.env.DATABASE_PATH ?? "./data/newsforge.db"
-);
+const databasePath = process.env.DATABASE_PATH || path.resolve(process.cwd(), "..", "data", "newsforge.db");
 
 function openReadOnlyDatabase() {
   if (!existsSync(databasePath)) {
@@ -18,7 +15,7 @@ function openReadOnlyDatabase() {
 
   try {
     return createClient({
-      url: pathToFileURL(databasePath).href,
+      url: `file:${databasePath}`,
     });
   } catch (error) {
     console.warn(`[db] Failed to open readonly database at ${databasePath}`, error);
