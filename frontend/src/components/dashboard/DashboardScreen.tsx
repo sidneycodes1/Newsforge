@@ -13,16 +13,37 @@ import ActiveRunCard from "./ActiveRunCard";
 import CountdownTimer from "./CountdownTimer";
 import OutputGrid from "./OutputGrid";
 
-function getScheduleMinutes(schedule: string) {
-  if (schedule === "*/15 * * * *") return 15;
-  if (schedule === "*/30 * * * *") return 30;
-  if (schedule === "0 * * * *") return 60;
-  if (schedule === "0 */6 * * *") return 360;
-  return 30;
-}
-
-function getNextRunDate(schedule: string) {
-  return new Date(Date.now() + getScheduleMinutes(schedule) * 60_000);
+function getNextRunTime(schedule: string): Date {
+  const now = new Date();
+  let runHours = [9, 18];
+  try {
+    const parts = schedule.split(' ');
+    if (parts.length >= 2) {
+      const hourPart = parts[1];
+      if (hourPart.includes(',')) {
+        runHours = hourPart.split(',').map(Number);
+      } else if (hourPart === '*') {
+        runHours = Array.from({length: 24}, (_, i) => i);
+      } else if (hourPart.includes('*/')) {
+        const interval = parseInt(hourPart.replace('*/', ''));
+        runHours = Array.from({length: Math.floor(24/interval)}, (_, i) => i * interval);
+      } else {
+        runHours = [parseInt(hourPart)];
+      }
+    }
+  } catch {
+    runHours = [9, 18];
+  }
+  const nextRun = new Date(now);
+  for (const hour of runHours.sort((a, b) => a - b)) {
+    nextRun.setHours(hour, 0, 0, 0);
+    if (nextRun > now) {
+      return nextRun;
+    }
+  }
+  nextRun.setDate(nextRun.getDate() + 1);
+  nextRun.setHours(runHours[0], 0, 0, 0);
+  return nextRun;
 }
 
 function DashboardSkeleton() {
@@ -58,7 +79,24 @@ export default function DashboardScreen() {
   const [error, setError] = useState<string | null>(null);
   const [triggering, setTriggering] = useState(false);
 
-  const nextRunAt = useMemo(() => getNextRunDate(schedule), [schedule]);
+  const nextRunAt = useMemo(() => getNextRunTime(schedule), [schedule]);
+
+  // Pagination states
+  const ITEMS_PER_PAGE = 6;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Calculate pagination
+  const totalItems = recentRuns.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const currentItems = useMemo(() => {
+    return recentRuns.slice(startIndex, endIndex);
+  }, [recentRuns, startIndex, endIndex]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [recentRuns]);
 
   const loadRuns = async () => {
     const response = await fetch("/api/runs?limit=50&page=1", { cache: "no-store" });
@@ -98,7 +136,7 @@ export default function DashboardScreen() {
 
       setSchedule(settingsData?.schedule ?? "*/30 * * * *");
       setRecentRuns(
-        (runsData as any[]).filter((run) => String(run.status) === "complete").slice(0, 6)
+        (runsData as any[]).filter((run) => String(run.status) === "complete")
       );
       setActiveRun(activeData?.run ?? null);
       setActiveSteps(activeData?.steps ?? []);
@@ -125,7 +163,7 @@ export default function DashboardScreen() {
         if (!activeData?.run) {
           const runsData = await loadRuns();
           setRecentRuns(
-            (runsData as any[]).filter((run) => String(run.status) === "complete").slice(0, 6)
+            (runsData as any[]).filter((run) => String(run.status) === "complete")
           );
           if (activePollRef.current) {
             window.clearInterval(activePollRef.current);
@@ -163,7 +201,7 @@ export default function DashboardScreen() {
       <div className="flex flex-col gap-3 border-b border-[#1A1A1A] px-4 py-4 sm:px-6 md:flex-row md:items-center md:justify-between">
         <div className="text-[20px] font-semibold text-[#F0F0F0]">Live Feed</div>
         <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
-          <CountdownTimer nextRunAt={nextRunAt} />
+          <CountdownTimer schedule={schedule} />
           <Button
             variant="ghost"
             size="sm"
@@ -220,10 +258,58 @@ export default function DashboardScreen() {
             )}
 
             <div>
-              <div className="mb-4 text-[14px] uppercase tracking-[0.16em] text-[#666666]">
-                Recent Outputs
+              <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#1A1A1A]">
+                <h2 className="text-xs font-semibold tracking-widest text-[#666666] uppercase font-mono">
+                  Recent Outputs
+                </h2>
+                <span className="text-xs text-[#666666] font-mono">
+                  Showing {totalItems > 0 ? startIndex + 1 : 0}–{Math.min(endIndex, totalItems)} of {totalItems}
+                </span>
               </div>
-              <OutputGrid runs={recentRuns} />
+              
+              <OutputGrid runs={currentItems} />
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6 pt-4 border-t border-[#222222]">
+                  {/* Back Button */}
+                  <button
+                    onClick={() => {
+                      setCurrentPage(prev => prev - 1);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    disabled={currentPage === 1}
+                    className={`px-4 py-2 text-sm font-medium rounded border transition-all min-h-[44px]
+                      ${currentPage === 1
+                        ? 'border-[#333333] text-[#444444] cursor-not-allowed bg-transparent'
+                        : 'border-[#F5C518] text-[#F5C518] hover:bg-[#F5C518]/10 cursor-pointer'
+                      }`}
+                  >
+                    ← Back
+                  </button>
+
+                  {/* Page Indicator */}
+                  <span className="text-sm text-[#666666] font-mono">
+                    Page <span className="text-white font-medium">{currentPage}</span> of{' '}
+                    <span className="text-white font-medium">{totalPages}</span>
+                  </span>
+
+                  {/* Next Button */}
+                  <button
+                    onClick={() => {
+                      setCurrentPage(prev => prev + 1);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    disabled={currentPage === totalPages}
+                    className={`px-4 py-2 text-sm font-medium rounded border transition-all min-h-[44px]
+                      ${currentPage === totalPages
+                        ? 'border-[#333333] text-[#444444] cursor-not-allowed bg-transparent'
+                        : 'border-[#F5C518] text-[#F5C518] hover:bg-[#F5C518]/10 cursor-pointer'
+                      }`}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
