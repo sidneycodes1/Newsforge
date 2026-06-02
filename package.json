@@ -8,11 +8,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build && npm run build:agent",
-    "start": "next start frontend",
+    "start": "next start",
     "build:agent": "tsc --project tsconfig.agent.json",
     "agent": "node agent/dist/runtime/runner.js",
     "type-check": "tsc --noEmit",
-    "lint": "next lint frontend",
+    "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "fix-covers": "npx tsx scripts/maintenance/fix-old-covers.ts",
     "test:ace": "npx tsx scripts/validation/test-ace.ts",

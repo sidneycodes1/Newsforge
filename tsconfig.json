@@ -19,17 +19,17 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
+      "@/*": [
+        "./*"
+      ],
       "@frontend/*": [
-        "frontend/src/*"
+        "./*"
       ],
       "@agent/*": [
         "agent/src/*"
       ],
       "@shared/*": [
         "shared/*"
-      ],
-      "@/*": [
-        "frontend/src/*"
       ]
     },
     "plugins": [
@@ -41,7 +41,8 @@
   "include": [
     "next-env.d.ts",
     "**/*.ts",
-    "**/*.tsx"
+    "**/*.tsx",
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
