@@ -22,6 +22,26 @@ if (!fs.existsSync(outputsDir)) {
   console.log('Created:', outputsDir);
 }
 
+// === STEP 1.5: Ensure symlinks for root build exist ===
+try {
+  const srcRoot = path.join(process.cwd(), 'src');
+  const srcFrontend = path.join(process.cwd(), 'frontend', 'src');
+  if (!fs.existsSync(srcRoot)) {
+    fs.symlinkSync(srcFrontend, srcRoot, 'junction');
+    console.log('Created src symlink/junction');
+  }
+
+  const publicRoot = path.join(process.cwd(), 'public');
+  const publicFrontend = path.join(process.cwd(), 'frontend', 'public');
+  if (!fs.existsSync(publicRoot)) {
+    fs.symlinkSync(publicFrontend, publicRoot, 'junction');
+    console.log('Created public symlink/junction');
+  }
+} catch (err) {
+  console.log('Symlink creation note:', err.message);
+}
+
+
 // === STEP 2: Copy static files ===
 console.log('Copying static files...');
 try {
@@ -126,6 +146,22 @@ agent.on('exit', (code, signal) => {
     }, 10000);
   }
 });
+
+// === STEP 6.5: Verify Next.js build exists ===
+const nextBuildId = path.join(process.cwd(), '.next', 'BUILD_ID');
+if (!fs.existsSync(nextBuildId)) {
+  console.log('Next.js build not found, building now...');
+  try {
+    execSync('npx next build', {
+      stdio: 'inherit',
+      cwd: process.cwd(),
+    });
+    console.log('Next.js built successfully');
+  } catch (err) {
+    console.error('Next.js build failed:', err.message);
+    process.exit(1);
+  }
+}
 
 // === STEP 7: Start Next.js dashboard ===
 console.log('Starting Next.js dashboard...');
