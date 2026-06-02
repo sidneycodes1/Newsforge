@@ -47,20 +47,25 @@ console.log('Working directory:', process.cwd());
 console.log('PORT:', process.env.PORT || '3000');
 console.log('DATABASE_PATH:', process.env.DATABASE_PATH);
 
-// Start agent worker in background
-console.log('Starting agent worker...');
+const agentEnv = {
+  ...process.env,
+  NODE_ENV: 'production',
+  CRON_SCHEDULE: process.env.CRON_SCHEDULE || '0 9,18 * * *',
+  ACE_PLATFORM_TOKEN: process.env.ACE_PLATFORM_TOKEN || '',
+  DATABASE_PATH: process.env.DATABASE_PATH || '/app/data/newsforge.db',
+  OUTPUTS_DIR: process.env.OUTPUTS_DIR || '/app/outputs',
+  AGENT_TOPIC: process.env.AGENT_TOPIC || 'Solana ecosystem',
+};
+
+console.log('=== Agent Environment ===');
+console.log('CRON_SCHEDULE:', agentEnv.CRON_SCHEDULE);
+console.log('ACE_PLATFORM_TOKEN:', agentEnv.ACE_PLATFORM_TOKEN ? 'SET' : 'NOT SET');
+console.log('DATABASE_PATH:', agentEnv.DATABASE_PATH);
+
 const agent = spawn('node', ['agent/dist/index.js'], {
   cwd: process.cwd(),
   stdio: 'inherit',
-  env: {
-    ...process.env,  // Inherit all parent env vars
-    NODE_ENV: 'production',
-    CRON_SCHEDULE: process.env.CRON_SCHEDULE || '0 9,18 * * *',
-    ACE_PLATFORM_TOKEN: process.env.ACE_PLATFORM_TOKEN,
-    DATABASE_PATH: process.env.DATABASE_PATH || '/app/data/newsforge.db',
-    OUTPUTS_DIR: process.env.OUTPUTS_DIR || '/app/outputs',
-    AGENT_TOPIC: process.env.AGENT_TOPIC || 'Solana ecosystem'
-  }
+  env: agentEnv,
 });
 
 agent.on('error', (err) => {

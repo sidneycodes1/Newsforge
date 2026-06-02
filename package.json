@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev frontend",
-    "build": "next build && npm run build:agent",
+    "build": "next build frontend && npm run build:agent",
     "start": "next start frontend",
     "build:agent": "tsc --project tsconfig.agent.json",
     "agent": "node agent/dist/runtime/runner.js",

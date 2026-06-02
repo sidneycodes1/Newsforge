@@ -5,8 +5,30 @@ import { useEffect, useState } from "react";
 import { Button } from "@frontend/components/ui/button";
 import { Card } from "@frontend/components/ui/card";
 import { Input } from "@frontend/components/ui/input";
-import { Select } from "@frontend/components/ui/select";
 import { Skeleton } from "@frontend/components/ui/skeleton";
+
+const intervalOptions = [
+  {
+    value: "0 */8 * * *",
+    label: "8 hours",
+    description: "3 runs/day — moderate token usage",
+  },
+  {
+    value: "0 9,18 * * *",
+    label: "12 hours (Recommended)",
+    description: "2 runs/day — optimal token efficiency",
+  },
+  {
+    value: "0 9 * * *",
+    label: "24 hours",
+    description: "1 run/day — maximum token efficiency",
+  },
+  {
+    value: "0 9 */2 * *",
+    label: "48 hours",
+    description: "1 run every 2 days — ultra-efficient",
+  },
+];
 
 function Toast({
   message,
@@ -33,22 +55,6 @@ function FieldSkeleton() {
   return <Skeleton className="h-10 w-full" />;
 }
 
-function getIntervalLabel(schedule: string) {
-  if (schedule === "*/15 * * * *") return "15min";
-  if (schedule === "*/30 * * * *") return "30min";
-  if (schedule === "0 * * * *") return "1hr";
-  if (schedule === "0 */6 * * *") return "6hr";
-  return "30min";
-}
-
-function getScheduleFromLabel(label: string) {
-  if (label === "15min") return "*/15 * * * *";
-  if (label === "30min") return "*/30 * * * *";
-  if (label === "1hr") return "0 * * * *";
-  if (label === "6hr") return "0 */6 * * *";
-  return "*/30 * * * *";
-}
-
 export default function SettingsScreen() {
   const [settings, setSettings] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,8 +73,9 @@ export default function SettingsScreen() {
           throw new Error(json.error ?? "Failed to load settings");
         }
         setSettings({
-          ...json.data,
-          intervalLabel: getIntervalLabel(json.data.schedule ?? "*/30 * * * *"),
+          topic: json.data?.topic ?? "Solana ecosystem",
+          schedule: json.data?.schedule ?? "0 9,18 * * *",
+          aceConnected: json.data?.aceConnected ?? false,
         });
       } catch {
         setToast({ message: "Unable to load settings", kind: "error" });
@@ -93,7 +100,7 @@ export default function SettingsScreen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           topic: settings.topic,
-          schedule: getScheduleFromLabel(settings.intervalLabel),
+          schedule: settings.schedule,
         }),
       });
       const json = await response.json();
@@ -136,8 +143,9 @@ export default function SettingsScreen() {
         <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-4">
             <Card className="p-5">
-              <div className="mb-4 text-[16px] font-semibold text-[#F0F0F0]">Run Schedule</div>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="mb-4 text-[16px] font-semibold text-[#F0F0F0]">Run Configuration</div>
+              
+              <div className="space-y-5">
                 <div>
                   <div className="mb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-[#666666]">
                     Topic
@@ -147,19 +155,38 @@ export default function SettingsScreen() {
                     onChange={(event) => update({ topic: event.target.value })}
                   />
                 </div>
+
                 <div>
-                  <div className="mb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-[#666666]">
-                    Interval
+                  <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-[#666666]">
+                    Run Interval
                   </div>
-                  <Select
-                    value={settings.intervalLabel ?? "30min"}
-                    onChange={(event) => update({ intervalLabel: event.target.value })}
-                  >
-                    <option value="15min">Every 15 minutes</option>
-                    <option value="30min">Every 30 minutes</option>
-                    <option value="1hr">Every 1 hour</option>
-                    <option value="6hr">Every 6 hours</option>
-                  </Select>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {intervalOptions.map((option) => {
+                      const active = settings.schedule === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => update({ schedule: option.value })}
+                          className={`w-full text-left p-3 rounded-[6px] border transition-all min-h-[50px] flex flex-col justify-between ${
+                            active
+                              ? "border-[#F5C518] bg-[#F5C518]/10 text-white"
+                              : "border-[#222222] bg-[#111111] text-[#666666] hover:border-[#333333]"
+                          }`}
+                        >
+                          <div className="flex w-full justify-between items-center">
+                            <span className={`font-medium text-sm ${active ? "text-[#F5C518]" : "text-[#F0F0F0]"}`}>
+                              {option.label}
+                            </span>
+                            {active ? (
+                              <span className="text-[#F5C518] text-xs font-mono">● Active</span>
+                            ) : null}
+                          </div>
+                          <p className="text-xs text-[#888888] mt-1.5">{option.description}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </Card>
@@ -183,8 +210,7 @@ export default function SettingsScreen() {
             <Card className="p-5">
               <div className="mb-3 text-[16px] font-semibold text-[#F0F0F0]">Agent Notes</div>
               <p className="text-sm leading-7 text-[#B5B5B5]">
-                The frontend reads this configuration and the worker picks up the saved schedule and topic
-                on the next run.
+                The agent worker reads this configuration dynamically and executes runs in accordance with your chosen interval. Changing settings here will automatically override local defaults on the next check.
               </p>
             </Card>
           </div>
