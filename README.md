@@ -76,15 +76,9 @@ This repository is submitted under the OOBE x Ace Data Cloud bounty, Category 2:
 
 ## Live Demo
 
-- Dashboard: https://newsforge-backend.up.railway.app
-- Run History: https://newsforge-backend.up.railway.app/history
-- Settings: https://newsforge-backend.up.railway.app/settings
+- Dashboard: https://newsforge.up.railway.app/
 - GitHub: https://github.com/sidneycodes1/Newsforge
 
-## Future Improvements
-
-- Phase 2: add onchain receipts so each run can be verified from a public transaction trail.
-- Phase 3: add zero-knowledge proofs for stronger provenance and privacy-preserving verification.
 
 ## Contributing & Attribution
 
