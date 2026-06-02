@@ -12,6 +12,17 @@ import ArticleView from "./ArticleView";
 import AudioPlayer from "./AudioPlayer";
 import ExecutionLog from "./ExecutionLog";
 
+function decodeText(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/\\u2014/g, '—')
+    .replace(/\\u2013/g, '–')
+    .replace(/\\u2019/g, "'")
+    .replace(/\\u201c/g, '"')
+    .replace(/\\u201d/g, '"')
+    .replace(/\\n/g, '\n');
+}
+
 function DetailSkeleton() {
   return (
     <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(280px,0.9fr)] lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,1fr)] lg:gap-5">
@@ -65,10 +76,11 @@ export default function RunDetailScreen({ id }: { id: string }) {
   const run = runData?.run ?? null;
   const steps = runData?.steps ?? [];
 
-  const displayTitle =
+  const displayTitle = decodeText(
     output?.article_title?.trim() ||
     (run?.topic ? `${run.topic} \u2014 Run #${run?.run_number ?? run?.runNumber ?? ""}`.trim() : "") ||
-    "NewsForge Report";
+    "NewsForge Report"
+  );
 
   if (loading) {
     return (
@@ -135,7 +147,7 @@ export default function RunDetailScreen({ id }: { id: string }) {
                     Audio Summary (generated as text):
                   </p>
                   <p className="text-sm text-[#D8D8D8]">
-                    {output.audio_text}
+                    {decodeText(output.audio_text)}
                   </p>
                 </div>
               );

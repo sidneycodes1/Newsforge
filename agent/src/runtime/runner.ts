@@ -27,6 +27,17 @@ function toErrorMessage(error: unknown): string {
   return String(error);
 }
 
+function cleanTitle(raw: string): string {
+  return raw
+    .replace(/\*\*Headline:\*\*/gi, '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/^#+\s*/gm, '')
+    .replace(/^[-*]\s*/gm, '')
+    .replace(/\\/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export async function runNewsForge(): Promise<void> {
   resetTokenUsage();
   const runId = randomUUID();
@@ -249,7 +260,7 @@ export async function runNewsForge(): Promise<void> {
   await createOutput({
     id: randomUUID(),
     run_id: runId,
-    article_title: articleData?.title || "",
+    article_title: cleanTitle(articleData?.title || ""),
     article_body: articleData?.body || "",
     image_path: imageData?.filePath || "",
     audio_path: audioData?.filePath || null,

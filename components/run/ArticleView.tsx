@@ -2,6 +2,17 @@
 
 import { useState } from "react";
 
+function decodeText(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/\\u2014/g, '—')
+    .replace(/\\u2013/g, '–')
+    .replace(/\\u2019/g, "'")
+    .replace(/\\u201c/g, '"')
+    .replace(/\\u201d/g, '"')
+    .replace(/\\n/g, '\n');
+}
+
 function getRunTitle(run: any, output: any) {
   const articleTitle =
     output?.article_title ?? output?.articleTitle ?? run?.articleTitle ?? run?.article_title ?? "";
@@ -30,8 +41,8 @@ export default function ArticleView({
 }) {
   const [imageError, setImageError] = useState(false);
 
-  const title = getRunTitle(run, output);
-  const articleBody = getArticleBody(output);
+  const title = decodeText(getRunTitle(run, output));
+  const articleBody = decodeText(getArticleBody(output));
   const hasContent = articleBody.trim().length > 50 && !articleBody.includes("autonomous agent report");
 
   return (

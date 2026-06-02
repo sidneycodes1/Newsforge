@@ -7,26 +7,26 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const intervalOptions = [
+const scheduleOptions = [
   {
-    value: "0 */8 * * *",
-    label: "8 hours",
-    description: "3 runs/day — moderate token usage",
+    value: '0 */8 * * *',
+    label: '8 hours',
+    description: '3 runs/day'
   },
   {
-    value: "0 9,18 * * *",
-    label: "12 hours (Recommended)",
-    description: "2 runs/day — optimal token efficiency",
+    value: '0 9,18 * * *',
+    label: '12 hours',
+    description: '2 runs/day — Recommended'
   },
   {
-    value: "0 9 * * *",
-    label: "24 hours",
-    description: "1 run/day — maximum token efficiency",
+    value: '0 9 * * *',
+    label: '24 hours',
+    description: '1 run/day — Max efficiency'
   },
   {
-    value: "0 9 */2 * *",
-    label: "48 hours",
-    description: "1 run every 2 days — ultra-efficient",
+    value: '0 9 */2 * *',
+    label: '48 hours',
+    description: '1 run every 2 days'
   },
 ];
 
@@ -161,31 +161,26 @@ export default function SettingsScreen() {
                     Run Interval
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    {intervalOptions.map((option) => {
-                      const active = settings.schedule === option.value;
-                      return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => update({ schedule: option.value })}
-                          className={`w-full text-left p-3 rounded-[6px] border transition-all min-h-[50px] flex flex-col justify-between ${
-                            active
-                              ? "border-[#F5C518] bg-[#F5C518]/10 text-white"
-                              : "border-[#222222] bg-[#111111] text-[#666666] hover:border-[#333333]"
+                    {scheduleOptions.map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => update({ schedule: opt.value })}
+                        className={`w-full text-left p-3 rounded border transition-all
+                          ${settings.schedule === opt.value
+                            ? 'border-[#F5C518] bg-[#F5C518]/10'
+                            : 'border-[#222] bg-[#111] hover:border-[#333]'
                           }`}
-                        >
-                          <div className="flex w-full justify-between items-center">
-                            <span className={`font-medium text-sm ${active ? "text-[#F5C518]" : "text-[#F0F0F0]"}`}>
-                              {option.label}
-                            </span>
-                            {active ? (
-                              <span className="text-[#F5C518] text-xs font-mono">● Active</span>
-                            ) : null}
-                          </div>
-                          <p className="text-xs text-[#888888] mt-1.5">{option.description}</p>
-                        </button>
-                      );
-                    })}
+                      >
+                        <div className="flex justify-between">
+                          <span className="text-sm font-medium text-white">{opt.label}</span>
+                          {settings.schedule === opt.value && (
+                            <span className="text-xs text-[#F5C518]">● Active</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-[#555] mt-1">{opt.description}</p>
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>

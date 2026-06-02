@@ -4,61 +4,33 @@ import { useEffect, useState } from "react";
 
 function getNextRunTime(schedule: string): Date {
   const now = new Date();
+  const parts = (schedule || '0 9,18 * * *').split(' ');
+  const hourPart = parts[1] || '9,18';
   
-  // Parse schedule to get run hours
-  // Default: 0 9,18 * * * (9 AM and 6 PM)
-  let runHours = [9, 18]; // defaults
-  
-  try {
-    const parts = schedule.split(' ');
-    if (parts.length >= 2) {
-      const hourPart = parts[1];
-      if (hourPart.includes(',')) {
-        runHours = hourPart.split(',').map(Number);
-      } else if (hourPart === '*') {
-        runHours = Array.from({length: 24}, (_, i) => i);
-      } else if (hourPart.includes('*/')) {
-        const interval = parseInt(hourPart.replace('*/', ''));
-        runHours = Array.from({length: Math.floor(24/interval)}, (_, i) => i * interval);
-      } else {
-        runHours = [parseInt(hourPart)];
-      }
-    }
-  } catch {
-    runHours = [9, 18];
+  let hours: number[] = [];
+  if (hourPart.includes(',')) {
+    hours = hourPart.split(',').map(Number).sort((a,b) => a-b);
+  } else if (hourPart.startsWith('*/')) {
+    const interval = parseInt(hourPart.slice(2));
+    hours = Array.from({length: Math.floor(24/interval)}, (_,i) => i*interval);
+  } else {
+    hours = [parseInt(hourPart)];
   }
 
-  // Find next run time
-  const nextRun = new Date(now);
-  
-  for (const hour of runHours.sort((a, b) => a - b)) {
-    nextRun.setHours(hour, 0, 0, 0);
-    if (nextRun > now) {
-      return nextRun;
-    }
+  for (const h of hours) {
+    const candidate = new Date(now);
+    candidate.setHours(h, 0, 0, 0);
+    if (candidate > now) return candidate;
   }
-  
-  // No more runs today, next is first run tomorrow
-  nextRun.setDate(nextRun.getDate() + 1);
-  nextRun.setHours(runHours[0], 0, 0, 0);
-  return nextRun;
-}
 
-function formatCountdown(ms: number): string {
-  if (ms <= 0) return '00:00:00';
-  
-  const totalSeconds = Math.floor(ms / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  
-  return [hours, minutes, seconds]
-    .map(v => v.toString().padStart(2, '0'))
-    .join(':');
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(hours[0], 0, 0, 0);
+  return tomorrow;
 }
 
 export default function CountdownTimer({ schedule }: { schedule: string }) {
-  const [timeLeft, setTimeLeft] = useState('');
+  const [timeStr, setTimeStr] = useState('');
   const [nextRunTime, setNextRunTime] = useState<Date | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -68,17 +40,20 @@ export default function CountdownTimer({ schedule }: { schedule: string }) {
 
   useEffect(() => {
     if (!mounted) return;
-
-    function update() {
-      const next = getNextRunTime(schedule || '0 9,18 * * *');
+    const tick = () => {
+      const next = getNextRunTime(schedule);
       setNextRunTime(next);
-      const ms = next.getTime() - Date.now();
-      setTimeLeft(formatCountdown(ms));
-    }
-
-    update();
-    const interval = setInterval(update, 1000);
-    return () => clearInterval(interval);
+      const diff = next.getTime() - Date.now();
+      const h = Math.max(0, Math.floor(diff / 3600000));
+      const m = Math.max(0, Math.floor((diff % 3600000) / 60000));
+      const s = Math.max(0, Math.floor((diff % 60000) / 1000));
+      setTimeStr(
+        `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+      );
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
   }, [schedule, mounted]);
 
   if (!mounted) {
@@ -92,7 +67,7 @@ export default function CountdownTimer({ schedule }: { schedule: string }) {
   return (
     <div className="text-right md:text-right text-left flex flex-col justify-center">
       <p className="text-[#F5C518] text-sm font-mono font-bold">
-        Next run in {timeLeft}
+        Next run in {timeStr}
       </p>
       {nextRunTime && (
         <p className="text-[11px] text-[#666666] mt-0.5 font-mono">

@@ -15,35 +15,29 @@ import OutputGrid from "./OutputGrid";
 
 function getNextRunTime(schedule: string): Date {
   const now = new Date();
-  let runHours = [9, 18];
-  try {
-    const parts = schedule.split(' ');
-    if (parts.length >= 2) {
-      const hourPart = parts[1];
-      if (hourPart.includes(',')) {
-        runHours = hourPart.split(',').map(Number);
-      } else if (hourPart === '*') {
-        runHours = Array.from({length: 24}, (_, i) => i);
-      } else if (hourPart.includes('*/')) {
-        const interval = parseInt(hourPart.replace('*/', ''));
-        runHours = Array.from({length: Math.floor(24/interval)}, (_, i) => i * interval);
-      } else {
-        runHours = [parseInt(hourPart)];
-      }
-    }
-  } catch {
-    runHours = [9, 18];
+  const parts = (schedule || '0 9,18 * * *').split(' ');
+  const hourPart = parts[1] || '9,18';
+  
+  let hours: number[] = [];
+  if (hourPart.includes(',')) {
+    hours = hourPart.split(',').map(Number).sort((a,b) => a-b);
+  } else if (hourPart.startsWith('*/')) {
+    const interval = parseInt(hourPart.slice(2));
+    hours = Array.from({length: Math.floor(24/interval)}, (_,i) => i*interval);
+  } else {
+    hours = [parseInt(hourPart)];
   }
-  const nextRun = new Date(now);
-  for (const hour of runHours.sort((a, b) => a - b)) {
-    nextRun.setHours(hour, 0, 0, 0);
-    if (nextRun > now) {
-      return nextRun;
-    }
+
+  for (const h of hours) {
+    const candidate = new Date(now);
+    candidate.setHours(h, 0, 0, 0);
+    if (candidate > now) return candidate;
   }
-  nextRun.setDate(nextRun.getDate() + 1);
-  nextRun.setHours(runHours[0], 0, 0, 0);
-  return nextRun;
+
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(hours[0], 0, 0, 0);
+  return tomorrow;
 }
 
 function DashboardSkeleton() {
@@ -84,15 +78,11 @@ export default function DashboardScreen() {
   // Pagination states
   const ITEMS_PER_PAGE = 6;
   const [currentPage, setCurrentPage] = useState(1);
-
-  // Calculate pagination
-  const totalItems = recentRuns.length;
-  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentItems = useMemo(() => {
-    return recentRuns.slice(startIndex, endIndex);
-  }, [recentRuns, startIndex, endIndex]);
+  const totalPages = Math.ceil(recentRuns.length / ITEMS_PER_PAGE);
+  const paginatedRuns = recentRuns.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   useEffect(() => {
     setCurrentPage(1);
@@ -263,47 +253,36 @@ export default function DashboardScreen() {
                   Recent Outputs
                 </h2>
                 <span className="text-xs text-[#666666] font-mono">
-                  Showing {totalItems > 0 ? startIndex + 1 : 0}–{Math.min(endIndex, totalItems)} of {totalItems}
+                  Showing {recentRuns.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}–{Math.min(currentPage * ITEMS_PER_PAGE, recentRuns.length)} of {recentRuns.length}
                 </span>
               </div>
               
-              <OutputGrid runs={currentItems} />
+              <OutputGrid runs={paginatedRuns} />
 
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-6 pt-4 border-t border-[#222222]">
-                  {/* Back Button */}
                   <button
-                    onClick={() => {
-                      setCurrentPage(prev => prev - 1);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
+                    onClick={() => { setCurrentPage(p => p - 1); window.scrollTo(0,0); }}
                     disabled={currentPage === 1}
-                    className={`px-4 py-2 text-sm font-medium rounded border transition-all min-h-[44px]
+                    className={`px-6 py-3 text-sm font-medium rounded border transition-all
                       ${currentPage === 1
-                        ? 'border-[#333333] text-[#444444] cursor-not-allowed bg-transparent'
-                        : 'border-[#F5C518] text-[#F5C518] hover:bg-[#F5C518]/10 cursor-pointer'
+                        ? 'border-[#333] text-[#444] cursor-not-allowed'
+                        : 'border-[#F5C518] text-[#F5C518] hover:bg-[#F5C518]/10'
                       }`}
                   >
                     ← Back
                   </button>
-
-                  {/* Page Indicator */}
-                  <span className="text-sm text-[#666666] font-mono">
-                    Page <span className="text-white font-medium">{currentPage}</span> of{' '}
-                    <span className="text-white font-medium">{totalPages}</span>
+                  <span className="text-sm text-[#666]">
+                    Page <span className="text-white font-bold">{currentPage}</span> of{' '}
+                    <span className="text-white font-bold">{totalPages}</span>
                   </span>
-
-                  {/* Next Button */}
                   <button
-                    onClick={() => {
-                      setCurrentPage(prev => prev + 1);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
+                    onClick={() => { setCurrentPage(p => p + 1); window.scrollTo(0,0); }}
                     disabled={currentPage === totalPages}
-                    className={`px-4 py-2 text-sm font-medium rounded border transition-all min-h-[44px]
+                    className={`px-6 py-3 text-sm font-medium rounded border transition-all
                       ${currentPage === totalPages
-                        ? 'border-[#333333] text-[#444444] cursor-not-allowed bg-transparent'
-                        : 'border-[#F5C518] text-[#F5C518] hover:bg-[#F5C518]/10 cursor-pointer'
+                        ? 'border-[#333] text-[#444] cursor-not-allowed'
+                        : 'border-[#F5C518] text-[#F5C518] hover:bg-[#F5C518]/10'
                       }`}
                   >
                     Next →

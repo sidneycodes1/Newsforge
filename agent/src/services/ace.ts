@@ -334,6 +334,12 @@ function splitArticleContent(content: string, topic: string) {
   }
 
   title = title.replace(/^#+\s*/, "").trim();
+  title = title
+    .replace(/\*\*Headline:\*\*/gi, '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/^#+\s*/gm, '')
+    .replace(/\\/g, '')
+    .trim();
   if (!title) {
     title = `${topic} Report — ${new Date().toLocaleDateString()}`;
   }
