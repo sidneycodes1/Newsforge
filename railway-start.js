@@ -1,52 +1,66 @@
-const { spawn } = require('child_process');
-const fs = require('fs');
+const { spawn, execSync } = require('child_process');
 const path = require('path');
-
-// Create required directories
-const dirs = [
-  path.join(process.cwd(), 'data'),
-  path.join(process.cwd(), 'outputs'),
-];
-dirs.forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-    console.log('Created:', dir);
-  }
-});
-
-// Copy static files for standalone mode
-const staticSrc = path.join(process.cwd(), '.next', 'static');
-const staticDst = path.join(process.cwd(), '.next', 'standalone', '.next', 'static');
-const publicSrc = path.join(process.cwd(), 'public');
-const publicDst = path.join(process.cwd(), '.next', 'standalone', 'public');
-
-function copyDir(src, dst) {
-  if (!fs.existsSync(src)) return;
-  if (!fs.existsSync(dst)) {
-    fs.mkdirSync(dst, { recursive: true });
-  }
-  const entries = fs.readdirSync(src, { withFileTypes: true });
-  for (const entry of entries) {
-    const srcPath = path.join(src, entry.name);
-    const dstPath = path.join(dst, entry.name);
-    if (entry.isDirectory()) {
-      copyDir(srcPath, dstPath);
-    } else {
-      fs.copyFileSync(srcPath, dstPath);
-    }
-  }
-}
-
-console.log('Copying static files...');
-copyDir(staticSrc, staticDst);
-copyDir(publicSrc, publicDst);
-console.log('Static files copied.');
+const fs = require('fs');
 
 console.log('=== NewsForge Starting on Railway ===');
 console.log('Working directory:', process.cwd());
-console.log('PORT:', process.env.PORT || '3000');
+console.log('PORT:', process.env.PORT || 8080);
 console.log('DATABASE_PATH:', process.env.DATABASE_PATH);
 
+// === STEP 1: Create required directories ===
+const dataDir = process.env.DATABASE_PATH 
+  ? path.dirname(process.env.DATABASE_PATH)
+  : '/app/data';
+const outputsDir = process.env.OUTPUTS_DIR || '/app/outputs';
+
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+  console.log('Created:', dataDir);
+}
+if (!fs.existsSync(outputsDir)) {
+  fs.mkdirSync(outputsDir, { recursive: true });
+  console.log('Created:', outputsDir);
+}
+
+// === STEP 2: Copy static files ===
+console.log('Copying static files...');
+try {
+  const standaloneStatic = path.join(process.cwd(), '.next', 'standalone', '.next', 'static');
+  const targetStatic = path.join(process.cwd(), '.next', 'static');
+  if (fs.existsSync(targetStatic) && !fs.existsSync(standaloneStatic)) {
+    fs.mkdirSync(path.dirname(standaloneStatic), { recursive: true });
+    execSync(`cp -r "${targetStatic}" "${standaloneStatic}"`, { stdio: 'inherit' });
+  }
+
+  const publicSrc = path.join(process.cwd(), 'public');
+  const publicDst = path.join(process.cwd(), '.next', 'standalone', 'public');
+  if (fs.existsSync(publicSrc) && !fs.existsSync(publicDst)) {
+    execSync(`cp -r "${publicSrc}" "${publicDst}"`, { stdio: 'inherit' });
+  }
+  console.log('Static files copied.');
+} catch (err) {
+  console.log('Static copy note:', err.message);
+}
+
+// === STEP 3: Compile agent TypeScript ===
+console.log('=== Compiling agent TypeScript ===');
+try {
+  execSync('npx tsc --project tsconfig.agent.json', {
+    stdio: 'inherit',
+    cwd: process.cwd()
+  });
+  console.log('=== Agent compiled successfully ===');
+} catch (err) {
+  console.error('=== Agent compilation failed:', err.message);
+  // Try to continue if dist already exists
+  if (!fs.existsSync(path.join(process.cwd(), 'agent', 'dist', 'index.js'))) {
+    console.error('No fallback dist found. Exiting.');
+    process.exit(1);
+  }
+  console.log('Using existing dist as fallback.');
+}
+
+// === STEP 4: Set up agent environment ===
 const agentEnv = {
   ...process.env,
   NODE_ENV: 'production',
@@ -62,7 +76,38 @@ console.log('CRON_SCHEDULE:', agentEnv.CRON_SCHEDULE);
 console.log('ACE_PLATFORM_TOKEN:', agentEnv.ACE_PLATFORM_TOKEN ? 'SET' : 'NOT SET');
 console.log('DATABASE_PATH:', agentEnv.DATABASE_PATH);
 
-const agent = spawn('node', ['agent/dist/index.js'], {
+// === STEP 5: Initialize database ===
+console.log('=== Initializing database ===');
+try {
+  // Run database migration/init using the agent's db client
+  execSync('node -e "const { createClient } = require(\'@libsql/client\'); const path = require(\'path\'); const fs = require(\'fs\'); const dbPath = process.env.DATABASE_PATH || \'/app/data/newsforge.db\'; const dir = path.dirname(dbPath); if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); console.log(\'DB path:\', dbPath);"', {
+    stdio: 'inherit',
+    cwd: process.cwd(),
+    env: agentEnv
+  });
+
+  // Initialize DB using the compiled agent
+  execSync('node -r ./register-paths.js -e "require(\'./agent/dist/db/client.js\')"', {
+    stdio: 'inherit', 
+    cwd: process.cwd(),
+    env: agentEnv
+  });
+  console.log('=== Database initialized successfully ===');
+} catch (err) {
+  console.log('=== DB init note:', err.message, '===');
+  // Continue anyway - agent will initialize DB on first run
+}
+
+// === STEP 6: Start agent worker ===
+console.log('Starting agent worker...');
+const agentDistPath = path.join(process.cwd(), 'agent', 'dist', 'index.js');
+
+if (!fs.existsSync(agentDistPath)) {
+  console.error('Agent dist not found at:', agentDistPath);
+  process.exit(1);
+}
+
+const agent = spawn('node', ['-r', './register-paths.js', agentDistPath], {
   cwd: process.cwd(),
   stdio: 'inherit',
   env: agentEnv,
@@ -73,60 +118,56 @@ agent.on('error', (err) => {
 });
 
 agent.on('exit', (code, signal) => {
-  console.log('Agent exited:', code, signal);
+  console.log(`Agent exited: ${code} ${signal}`);
+  if (code !== 0) {
+    console.error('Agent crashed. Restarting in 10 seconds...');
+    setTimeout(() => {
+      process.exit(1); // Let Railway restart the container
+    }, 10000);
+  }
 });
 
-// Start Next.js standalone server
+// === STEP 7: Start Next.js dashboard ===
 console.log('Starting Next.js dashboard...');
-const serverPath = path.join(process.cwd(), '.next', 'standalone', 'server.js');
+const port = process.env.PORT || 8080;
 
-// Check if standalone server exists
-if (!fs.existsSync(serverPath)) {
-  console.error('Standalone server not found at:', serverPath);
-  console.log('Falling back to npm start...');
-  const fallback = spawn('npm', ['run', 'start'], {
+const standaloneServer = path.join(process.cwd(), '.next', 'standalone', 'server.js');
+
+let nextProcess;
+if (fs.existsSync(standaloneServer)) {
+  console.log('Using standalone server...');
+  nextProcess = spawn('node', [standaloneServer], {
+    cwd: process.cwd(),
     stdio: 'inherit',
     env: {
       ...process.env,
-      PORT: process.env.PORT || '3000',
+      PORT: port,
       HOSTNAME: '0.0.0.0',
     },
-    cwd: process.cwd(),
-  });
-  fallback.on('exit', (code) => {
-    agent.kill();
-    process.exit(code || 0);
   });
 } else {
-  const dashboard = spawn('node', [serverPath], {
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      PORT: process.env.PORT || '3000',
-      HOSTNAME: '0.0.0.0',
-    },
+  console.log('Standalone not found, using next start...');
+  nextProcess = spawn('npx', ['next', 'start', '-p', port, '-H', '0.0.0.0'], {
     cwd: process.cwd(),
-  });
-
-  dashboard.on('error', (err) => {
-    console.error('Dashboard error:', err.message);
-    agent.kill();
-    process.exit(1);
-  });
-
-  dashboard.on('exit', (code) => {
-    console.log('Dashboard exited:', code);
-    agent.kill();
-    process.exit(code || 0);
+    stdio: 'inherit',
+    env: process.env,
   });
 }
 
+nextProcess.on('error', (err) => {
+  console.error('Next.js error:', err.message);
+});
+
+// === STEP 8: Handle shutdown ===
 process.on('SIGTERM', () => {
-  agent.kill('SIGTERM');
+  console.log('Shutting down...');
+  agent.kill();
+  nextProcess.kill();
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  agent.kill('SIGTERM');
+  agent.kill();
+  nextProcess.kill();
   process.exit(0);
 });
