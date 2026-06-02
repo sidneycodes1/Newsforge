@@ -26,7 +26,6 @@ function getSteps(steps: any[]) {
     { stepNumber: 1, stepName: "Fetch News", apiUsed: "ACE Search API" },
     { stepNumber: 2, stepName: "Write Article", apiUsed: "ACE Chat API" },
     { stepNumber: 3, stepName: "Generate Image", apiUsed: "ACE Flux API" },
-    { stepNumber: 4, stepName: "Generate Audio", apiUsed: "ACE TTS API" },
   ];
 
   return order.map((template) => {

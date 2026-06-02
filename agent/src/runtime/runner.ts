@@ -27,16 +27,22 @@ function toErrorMessage(error: unknown): string {
   return String(error);
 }
 
-function cleanTitle(raw: string): string {
+const cleanTitle = (raw: string, topic: string = "News Update"): string => {
+  if (!raw) return topic;
+  
+  // Remove search queries
+  if (raw.includes('search(')) {
+    return topic;
+  }
+  
   return raw
-    .replace(/\*\*Headline:\*\*/gi, '')
+    .replace(/^#+\s*/, '')
+    .replace(/^\*\*Headline:\*\*/i, '')
     .replace(/\*\*(.*?)\*\*/g, '$1')
-    .replace(/^#+\s*/gm, '')
-    .replace(/^[-*]\s*/gm, '')
+    .replace(/^[>-]\s*/, '')
     .replace(/\\/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+    .trim() || topic;
+};
 
 export async function runNewsForge(): Promise<void> {
   resetTokenUsage();
@@ -172,78 +178,14 @@ export async function runNewsForge(): Promise<void> {
     console.error("Step 3 failed (non-fatal):", toErrorMessage(error));
   }
 
-  // STEP 4: Generate Audio
-  const step4Id = randomUUID();
-  await createStep({
-    id: step4Id,
-    run_id: runId,
-    step_number: 4,
-    step_name: "generate_audio",
-    api_used: "ACE TTS API",
-  });
-  await updateStepStatus(step4Id, "running");
-  const s4Start = Date.now();
-
-  try {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-    let skipAudio = false;
-
-    try {
-      const tokenStatusResponse = await fetch(`${apiBaseUrl}/api/token-status`);
-      if (tokenStatusResponse.ok) {
-        const tokenStatus = (await tokenStatusResponse.json()) as any;
-        if (Number(tokenStatus?.tokens_remaining ?? 999) < 50) {
-          skipAudio = true;
-          console.log("[runner] Skipped audio generation \u2014 insufficient tokens, prioritizing article");
-        }
-      }
-    } catch (error) {
-      console.log("[runner] Token status fetch failed, using local token estimate");
-      if (getTokenUsage().total >= 175) {
-        skipAudio = true;
-        console.log("[runner] Local token estimate is high, skipping audio generation");
-      }
-    }
-
-    if (skipAudio) {
-      audioData = {
-        filePath: "",
-        txHash: "audio-skipped-low-tokens",
-        costUsdc: 0,
-      };
-      await updateStepComplete(step4Id, {
-        status: "complete",
-        cost_usdc: 0,
-        tx_hash: audioData.txHash,
-        duration_ms: Date.now() - s4Start,
-        output_ref: "Audio skipped due to low token balance.",
-        completed_at: new Date().toISOString(),
-      });
-      console.log("Step 4 complete - Audio skipped");
-    } else {
-      audioData = await generateAudio(articleData.body, runId);
-      totalCostAce += audioData.costUsdc;
-      await updateStepComplete(step4Id, {
-        status: "complete",
-        cost_usdc: audioData.costUsdc,
-        tx_hash: audioData.txHash,
-        duration_ms: Date.now() - s4Start,
-        output_ref: audioData.filePath,
-        completed_at: new Date().toISOString(),
-      });
-      console.log("Step 4 complete - Audio saved");
-    }
-  } catch (error) {
-    await updateStepComplete(step4Id, {
-      status: "failed",
-      cost_usdc: 0,
-      tx_hash: "",
-      duration_ms: Date.now() - s4Start,
-      output_ref: toErrorMessage(error),
-      completed_at: new Date().toISOString(),
-    });
-    console.error("Step 4 failed (non-fatal):", toErrorMessage(error));
-  }
+  // STEP 4: Audio generation SKIPPED (removed feature)
+  console.log('[runner] Skipping audio (feature removed)');
+  audioData = {
+    filePath: null,
+    textFallback: null,
+    costUsdc: 0,
+    txHash: "skipped"
+  };
 
   const completedAt = new Date().toISOString();
   const tokenState = getTokenUsage();
@@ -260,7 +202,7 @@ export async function runNewsForge(): Promise<void> {
   await createOutput({
     id: randomUUID(),
     run_id: runId,
-    article_title: cleanTitle(articleData?.title || ""),
+    article_title: cleanTitle(articleData?.title || topic, topic),
     article_body: articleData?.body || "",
     image_path: imageData?.filePath || "",
     audio_path: audioData?.filePath || null,

@@ -582,7 +582,31 @@ export async function writeArticle(
 
   try {
     const content = extractChatContent(response?.data) || `TITLE: ${fallbackTitle}\n\n${fallbackBody}`;
-    const { title, body } = splitArticleContent(content, topic);
+    
+    // Extract clean title — first line that looks like a headline
+    let title = '';
+    const lines = content.split('\n');
+    for (const line of lines) {
+      const cleaned = line
+        .replace(/^#+\s*/, '')           // Remove # headers
+        .replace(/^\*\*/, '')             // Remove ** start
+        .replace(/\*\*:/, '')             // Remove **: 
+        .replace(/\*\*/, '')              // Remove ** end
+        .replace(/^[>-]\s*/, '')           // Remove quote/bullet
+        .trim();
+      
+      if (cleaned.length > 10 && cleaned.length < 200) {
+        title = cleaned;
+        break;
+      }
+    }
+
+    // Fallback to topic if no title found
+    if (!title) {
+      title = topic || 'News Update';
+    }
+
+    const { body } = splitArticleContent(content, topic);
     const finalBody = body || fallbackBody;
 
     fs.writeFileSync(filePath, `# ${title}\n\n${finalBody}`, "utf-8");
@@ -591,7 +615,7 @@ export async function writeArticle(
     recordTokenUsage("article", tokens);
 
     return {
-      title,
+      title: title,
       body: finalBody,
       filePath,
       txHash: freeTxHash(),
@@ -732,212 +756,24 @@ export async function generateImage(
 }
 
 export async function generateAudio(
-  articleBody: string,
-  runId: string
+  headline: string,
+  summary: string
 ): Promise<{
+  file: string | null;
+  format: string;
   filePath: string;
   textFallback?: string;
   txHash: string;
   costUsdc: number;
 }> {
-  const dir = path.join(OUTPUTS_DIR, runId);
-  fs.mkdirSync(dir, { recursive: true });
-  const filePath = path.join(dir, "audio.mp3");
-
-  console.log("[ACE] Calling generateAudio...");
-  console.log("[ACE] Token:", TOKEN ? "set" : "MISSING");
-
-  const summary = articleBody
-    .split(" ")
-    .slice(0, 100)
-    .join(" ")
-    .trim()
-    .slice(0, 200);
-
-  try {
-    console.log("[ACE] Trying Fish TTS...");
-    const fishRes = await axios.post(
-      "https://api.acedata.cloud/fish/audios",
-      {
-        action: "generate",
-        text: summary,
-        reference_id: "54a5170264694bfc8e9ad98df7cache",
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${TOKEN}`,
-          "Content-Type": "application/json",
-        },
-        timeout: 30000,
-      }
-    );
-    console.log("[ACE] Fish TTS status:", fishRes.status);
-    console.log("[ACE] Fish TTS data:", JSON.stringify(fishRes.data).slice(0, 300));
-
-    const audioUrl =
-      (fishRes.data as any)?.data?.[0]?.audio_url ||
-      (fishRes.data as any)?.audio_url ||
-      (fishRes.data as any)?.url ||
-      null;
-
-    if (audioUrl) {
-      const audioRes = await axios.get(audioUrl, {
-        responseType: "arraybuffer",
-        timeout: 30000,
-      });
-      if (audioRes.data.byteLength > 500) {
-        fs.writeFileSync(filePath, Buffer.from(audioRes.data));
-        console.log("[ACE] Fish TTS: audio saved");
-        recordTokenUsage("audio", extractUsageTokens(fishRes) || 20);
-        return {
-          filePath,
-          txHash: "free-credit-" + Date.now(),
-          costUsdc: 0,
-        };
-      }
-    }
-
-    const taskId = (fishRes.data as any)?.task_id || (fishRes.data as any)?.data?.[0]?.id;
-    if (taskId) {
-      for (let i = 0; i < 12; i++) {
-        console.log("[ACE] Fish poll attempt", i + 1, "taskId:", taskId);
-        await new Promise((r) => setTimeout(r, 3000));
-        const poll = await axios.get(`https://api.acedata.cloud/fish/audios/${taskId}`, {
-          headers: { Authorization: `Bearer ${TOKEN}` },
-          timeout: 10000,
-        });
-        console.log(
-          "[ACE] Fish poll response:",
-          JSON.stringify(poll.data).slice(0, 200)
-        );
-        const state = (poll.data as any)?.data?.[0]?.state || (poll.data as any)?.state;
-        const url = (poll.data as any)?.data?.[0]?.audio_url || (poll.data as any)?.audio_url;
-        console.log("[ACE] Fish poll:", state, url);
-        if (url && (state === "succeeded" || state === "complete")) {
-          const audioRes = await axios.get(url, {
-            responseType: "arraybuffer",
-            timeout: 30000,
-          });
-          if (audioRes.data.byteLength > 500) {
-            fs.writeFileSync(filePath, Buffer.from(audioRes.data));
-            recordTokenUsage("audio", extractUsageTokens(poll) || 16);
-            return {
-              filePath,
-              txHash: "free-credit-" + Date.now(),
-              costUsdc: 0,
-            };
-          }
-        }
-        if (state === "failed") break;
-      }
-    }
-  } catch (fishErr: any) {
-    console.log("[ACE] Fish TTS failed:", fishErr.response?.status || fishErr.message);
-    if (fishErr.response?.data) {
-      console.log("[ACE] Fish error:", JSON.stringify(fishErr.response.data).slice(0, 200));
-    }
-  }
-
-  const sunoUrls = ["https://api.acedata.cloud/suno/audios"];
-
-  for (const url of sunoUrls) {
-    try {
-      console.log("[ACE] URL:", url);
-      const res = await axios.post(
-        url,
-        {
-          action: "generate",
-          prompt: `Background news music inspired by: ${summary}`,
-          model: "chirp-v3-5",
-          instrumental: true,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${TOKEN}`,
-            "Content-Type": "application/json",
-          },
-          timeout: 120000,
-        }
-      );
-      console.log("[ACE] generateAudio response status:", res.status);
-
-      const taskId = (res.data as any)?.task_id || (res.data as any)?.data?.[0]?.id || null;
-
-      if (!taskId) {
-        const audioUrl =
-          (res.data as any)?.data?.[0]?.audio_url || (res.data as any)?.audio_url || null;
-
-        if (audioUrl) {
-          const audioRes = await axios.get(audioUrl, {
-            responseType: "arraybuffer",
-            timeout: 30000,
-          });
-          fs.writeFileSync(filePath, Buffer.from(audioRes.data));
-          console.log("[ACE] generateAudio: saved audio");
-          recordTokenUsage("audio", extractUsageTokens(res) || 18);
-          return {
-            filePath,
-            txHash: "free-credit-" + Date.now(),
-            costUsdc: 0,
-          };
-        }
-        continue;
-      }
-
-      for (let i = 0; i < 10; i++) {
-        await new Promise((r) => setTimeout(r, 10000));
-        try {
-          const pollRes = await axios.get(`https://api.acedata.cloud/suno/audios/${taskId}`, {
-            headers: {
-              Authorization: `Bearer ${TOKEN}`,
-            },
-            timeout: 10000,
-          });
-          const state = (pollRes.data as any)?.data?.[0]?.state || (pollRes.data as any)?.state;
-
-          if (state === "succeeded" || state === "complete") {
-            const audioUrl =
-              (pollRes.data as any)?.data?.[0]?.audio_url || (pollRes.data as any)?.audio_url;
-            if (audioUrl) {
-              const audioRes = await axios.get(audioUrl, {
-                responseType: "arraybuffer",
-                timeout: 30000,
-              });
-              fs.writeFileSync(filePath, Buffer.from(audioRes.data));
-              console.log("[ACE] generateAudio: Suno complete");
-              recordTokenUsage("audio", extractUsageTokens(pollRes) || 16);
-              return {
-                filePath,
-                txHash: "free-credit-" + Date.now(),
-                costUsdc: 0,
-              };
-            }
-          }
-          if (state === "failed") break;
-        } catch (pollErr: any) {
-          console.log("[ACE] Suno poll error:", pollErr.message);
-        }
-      }
-    } catch (e: any) {
-      console.log("[ACE] generateAudio Suno failed:", url, e.response?.status || e.message);
-      if (e.response?.data) {
-        console.log("[ACE] Suno error body:", JSON.stringify(e.response.data).slice(0, 300));
-      }
-    }
-  }
-
-  console.log("[ACE] generateAudio: all attempts failed");
-  recordTokenUsage("audio", 4);
-  
-  const textContent = `Audio Summary: ${articleBody.substring(0, 200)}...`;
-  const textFallbackPath = filePath.replace(".mp3", ".txt");
-  fs.writeFileSync(textFallbackPath, textContent, "utf-8");
-  console.log("[ACE] generateAudio: saved text fallback");
-
+  // Audio feature removed
+  console.log('[ACE] Audio generation disabled');
   return {
+    file: null,
+    format: 'none',
     filePath: "",
-    textFallback: textContent,
-    txHash: "audio-skipped-" + Date.now(),
+    textFallback: undefined,
+    txHash: "audio-skipped",
     costUsdc: 0,
   };
 }

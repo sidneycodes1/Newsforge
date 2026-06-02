@@ -78,23 +78,17 @@ export default function DashboardScreen() {
   // Pagination states
   const ITEMS_PER_PAGE = 6;
   const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math.ceil(recentRuns.length / ITEMS_PER_PAGE);
-  const paginatedRuns = recentRuns.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  const [totalRuns, setTotalRuns] = useState(0);
+  const totalPages = Math.ceil(totalRuns / ITEMS_PER_PAGE);
+  const paginatedRuns = recentRuns;
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [recentRuns]);
-
-  const loadRuns = async () => {
-    const response = await fetch("/api/runs?limit=50&page=1", { cache: "no-store" });
+  const loadRuns = async (page: number, limit: number) => {
+    const response = await fetch(`/api/runs?limit=${limit}&page=${page}&status=complete`, { cache: "no-store" });
     const json = await response.json();
     if (!response.ok) {
       throw new Error(json.error ?? "Failed to load runs");
     }
-    return json.data ?? [];
+    return json;
   };
 
   const loadSettings = async () => {
@@ -118,18 +112,17 @@ export default function DashboardScreen() {
   const refresh = async () => {
     try {
       setError(null);
-      const [settingsData, runsData, activeData] = await Promise.all([
+      const [settingsData, activeData, runsData] = await Promise.all([
         loadSettings(),
-        loadRuns(),
         loadActive(),
+        loadRuns(currentPage, ITEMS_PER_PAGE),
       ]);
 
       setSchedule(settingsData?.schedule ?? "*/30 * * * *");
-      setRecentRuns(
-        (runsData as any[]).filter((run) => String(run.status) === "complete")
-      );
       setActiveRun(activeData?.run ?? null);
       setActiveSteps(activeData?.steps ?? []);
+      setRecentRuns(runsData.data ?? []);
+      setTotalRuns(runsData.total ?? 0);
 
       if (!activeData?.run && activePollRef.current) {
         window.clearInterval(activePollRef.current);
@@ -151,10 +144,9 @@ export default function DashboardScreen() {
         setActiveSteps(activeData?.steps ?? []);
 
         if (!activeData?.run) {
-          const runsData = await loadRuns();
-          setRecentRuns(
-            (runsData as any[]).filter((run) => String(run.status) === "complete")
-          );
+          const runsData = await loadRuns(currentPage, ITEMS_PER_PAGE);
+          setRecentRuns(runsData.data ?? []);
+          setTotalRuns(runsData.total ?? 0);
           if (activePollRef.current) {
             window.clearInterval(activePollRef.current);
             activePollRef.current = null;
@@ -170,7 +162,7 @@ export default function DashboardScreen() {
         window.clearInterval(activePollRef.current);
       }
     };
-  }, []);
+  }, [currentPage]);
 
   const triggerNow = async () => {
     setTriggering(true);
@@ -253,7 +245,7 @@ export default function DashboardScreen() {
                   Recent Outputs
                 </h2>
                 <span className="text-xs text-[#666666] font-mono">
-                  Showing {recentRuns.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}–{Math.min(currentPage * ITEMS_PER_PAGE, recentRuns.length)} of {recentRuns.length}
+                  Showing {recentRuns.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}–{Math.min(currentPage * ITEMS_PER_PAGE, totalRuns)} of {totalRuns}
                 </span>
               </div>
               

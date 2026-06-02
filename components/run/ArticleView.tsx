@@ -13,6 +13,17 @@ function decodeText(text: string): string {
     .replace(/\\n/g, '\n');
 }
 
+const cleanMarkdown = (text: string): string => {
+  return (text || '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')           // **bold** → bold
+    .replace(/__(.*?)__/g, '$1')               // __bold__ → bold
+    .replace(/\*\*(.*?)\*\*/g, '$1')           // Remove all **
+    .replace(/^\[\*\*Headline:\*\*\]/gm, '')  // Remove [**Headline:**]
+    .replace(/^#+\s*/gm, '')                   // Remove # headers
+    .replace(/\n\n+/g, '\n\n')                 // Fix spacing
+    .trim();
+};
+
 function getRunTitle(run: any, output: any) {
   const articleTitle =
     output?.article_title ?? output?.articleTitle ?? run?.articleTitle ?? run?.article_title ?? "";
@@ -42,7 +53,7 @@ export default function ArticleView({
   const [imageError, setImageError] = useState(false);
 
   const title = decodeText(getRunTitle(run, output));
-  const articleBody = decodeText(getArticleBody(output));
+  const articleBody = cleanMarkdown(decodeText(getArticleBody(output)));
   const hasContent = articleBody.trim().length > 50 && !articleBody.includes("autonomous agent report");
 
   return (

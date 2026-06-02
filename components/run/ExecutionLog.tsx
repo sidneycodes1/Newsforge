@@ -55,7 +55,12 @@ export default function ExecutionLog({
   runId: string;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const isExpandable = steps.length > 2;
+  const filteredSteps = steps.filter((step) => {
+    const name = (getStepName(step) || "").toLowerCase();
+    const rawName = (step.step_name || "").toLowerCase();
+    return name !== "generate_audio" && name !== "generate audio" && rawName !== "generate_audio" && rawName !== "generate audio";
+  });
+  const isExpandable = filteredSteps.length > 2;
 
   return (
     <Card className="border-[#222222] bg-[#111111] p-4" data-run-id={runId}>
@@ -64,15 +69,15 @@ export default function ExecutionLog({
       </div>
 
       <div className="space-y-2">
-        {steps.map((step, index) => (
+        {filteredSteps.map((step, index) => (
           <details
-            key={step.id}
-            className={[
-              "group rounded-[6px] border border-[#222222] bg-[#0D0D0D]",
-              index >= 2 && !expanded ? "hidden md:block" : "block",
-            ].join(" ")}
-            open={step.status === "running"}
-          >
+              key={step.id}
+              className={[
+                "group rounded-[6px] border border-[#222222] bg-[#0D0D0D]",
+                index >= 2 && !expanded ? "hidden md:block" : "block",
+              ].join(" ")}
+              open={step.status === "running"}
+            >
             <summary className="flex cursor-pointer list-none flex-col gap-2 px-4 py-3 md:flex-row md:items-center md:justify-between">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="font-mono text-[11px] text-[#666666]">

@@ -9,7 +9,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateTime } from "@shared/utils/format";
 
 import ArticleView from "./ArticleView";
-import AudioPlayer from "./AudioPlayer";
 import ExecutionLog from "./ExecutionLog";
 
 function decodeText(text: string): string {
@@ -127,38 +126,7 @@ export default function RunDetailScreen({ id }: { id: string }) {
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(280px,0.9fr)] lg:grid-cols-[minmax(0,1.5fr)_minmax(340px,1fr)] lg:gap-5">
         <div className="space-y-5">
           <ArticleView runId={id} run={run} output={output} />
-          {(() => {
-            if (hasAudio) {
-              return (
-                <div className="mt-6">
-                  <p className="mb-2 font-mono text-xs uppercase tracking-wider text-[#666666]">
-                    Audio Summary
-                  </p>
-                  <p className="mb-2 text-sm text-[#666666]">{displayTitle}</p>
-                  <AudioPlayer src={`/api/output/${id}/audio.mp3`} />
-                </div>
-              );
-            }
 
-            if (output?.audio_text) {
-              return (
-                <div className="mt-6 rounded-[6px] border border-[#222222] p-4">
-                  <p className="mb-2 font-mono text-xs uppercase tracking-wider text-[#666666]">
-                    Audio Summary (generated as text):
-                  </p>
-                  <p className="text-sm text-[#D8D8D8]">
-                    {decodeText(output.audio_text)}
-                  </p>
-                </div>
-              );
-            }
-
-            return (
-              <div className="mt-6 rounded-[6px] border border-[#222222] p-4 text-sm italic text-[#666666]">
-                Audio generation skipped (low tokens \u2014 focus on article content)
-              </div>
-            );
-          })()}
         </div>
 
         <div className="space-y-4">
