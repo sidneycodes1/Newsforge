@@ -79,32 +79,44 @@ console.log('DATABASE_PATH:', agentEnv.DATABASE_PATH);
 // === STEP 5: Initialize database ===
 console.log('=== Initializing database ===');
 try {
-  // Run database migration/init using the agent's db client
-  execSync('node -e "const { createClient } = require(\'@libsql/client\'); const path = require(\'path\'); const fs = require(\'fs\'); const dbPath = process.env.DATABASE_PATH || \'/app/data/newsforge.db\'; const dir = path.dirname(dbPath); if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); console.log(\'DB path:\', dbPath);"', {
-    stdio: 'inherit',
-    cwd: process.cwd(),
-    env: agentEnv
-  });
-
-  // Initialize DB using the compiled agent
-  execSync('node -r ./register-paths.js -e "require(\'./agent/dist/db/client.js\')"', {
-    stdio: 'inherit', 
-    cwd: process.cwd(),
-    env: agentEnv
-  });
-  console.log('=== Database initialized successfully ===');
+  const dbPath = process.env.DATABASE_PATH || '/app/data/newsforge.db';
+  const dbDir = path.dirname(dbPath);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+  console.log('DB path:', dbPath);
+  console.log('=== Database directory ready ===');
 } catch (err) {
   console.log('=== DB init note:', err.message, '===');
-  // Continue anyway - agent will initialize DB on first run
 }
 
 // === STEP 6: Start agent worker ===
 console.log('Starting agent worker...');
 const agentDistPath = path.join(process.cwd(), 'agent', 'dist', 'index.js');
 
+console.log('Looking for agent at:', agentDistPath);
+console.log('Agent dist exists:', fs.existsSync(agentDistPath));
+
+// List what IS in agent/dist for debugging
+try {
+  const distContents = fs.readdirSync(path.join(process.cwd(), 'agent', 'dist'));
+  console.log('agent/dist contents:', distContents);
+} catch (e) {
+  console.log('agent/dist does not exist yet');
+}
+
 if (!fs.existsSync(agentDistPath)) {
   console.error('Agent dist not found at:', agentDistPath);
-  process.exit(1);
+  console.error('Trying to compile again...');
+  try {
+    execSync('npx tsc --project tsconfig.agent.json', {
+      stdio: 'inherit',
+      cwd: process.cwd()
+    });
+  } catch (e) {
+    console.error('Second compile failed:', e.message);
+    process.exit(1);
+  }
 }
 
 const agent = spawn('node', ['-r', './register-paths.js', agentDistPath], {

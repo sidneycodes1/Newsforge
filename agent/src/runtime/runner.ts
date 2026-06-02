@@ -180,7 +180,7 @@ export async function runNewsForge(): Promise<void> {
     try {
       const tokenStatusResponse = await fetch(`${apiBaseUrl}/api/token-status`);
       if (tokenStatusResponse.ok) {
-        const tokenStatus = await tokenStatusResponse.json();
+        const tokenStatus = (await tokenStatusResponse.json()) as any;
         if (Number(tokenStatus?.tokens_remaining ?? 999) < 50) {
           skipAudio = true;
           console.log("[runner] Skipped audio generation \u2014 insufficient tokens, prioritizing article");
