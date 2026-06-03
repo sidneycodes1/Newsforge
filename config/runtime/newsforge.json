@@ -1,7 +1,7 @@
 {
   "agentName": "NewsForge SAP Agent",
   "sapAgentAddress": "8xH3...a1Z7",
-  "cronSchedule": "0 9 */2 * *",
+  "cronSchedule": "0 9 * * *",
   "intervalLabel": "30min",
   "topic": "Solana ecosystem",
   "synapseRpcEndpoint": "https://rpc.synapse.network/v1",
@@ -9,7 +9,7 @@
   "synapseHealthy": true,
   "solanaBalanceSol": 0.0524,
   "acePlatformTokenMasked": "nf_demo_token_**********",
-  "nextRunAt": "2026-06-02T15:17:38.901Z",
-  "schedule": "0 9 */2 * *",
+  "nextRunAt": "2026-06-03T05:46:38.334Z",
+  "schedule": "0 9 * * *",
   "updatedAt": "2026-05-20T11:49:42.921Z"
 }
