@@ -527,7 +527,7 @@ Read the [What is NewsForge?](#-what-is-newsforge) section above.
 Follow the [Quick Start](#-quick-start) section.
 
 **Want to see it live?**  
-Visit https://newsforge-backend.up.railway.app
+Visit https://newsforge.up.railway.app
 
 **Want to see the code?**  
 Explore https://github.com/sidneycodes1/Newsforge
