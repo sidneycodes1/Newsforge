@@ -9,15 +9,15 @@
 
 ---
 
-## 🚀 Live Demo
+##  Live Demo
 
-**Dashboard:** [https://newsforge-backend.up.railway.app](https://newsforge-backend.up.railway.app)  
+**Dashboard:** [https://newsforge.up.railway.app](https://newsforge.up.railway.app)  
 **GitHub:** [github.com/sidneycodes1/Newsforge](https://github.com/sidneycodes1/Newsforge)  
 **Synapse Agent Protocol:** [View on SAP Mainnet](#sap-mainnet-registration)
 
 ---
 
-## 📋 Submitted For
+##  Submitted For
 
 **OOBE Protocol × Ace Data Cloud Bounty**  
 **Category:** Ace Data Cloud Usage (Category 2)  
@@ -27,7 +27,7 @@ NewsForge is a production-ready autonomous agent demonstrating **real, measurabl
 
 ---
 
-## 🎯 What is NewsForge?
+##  What is NewsForge?
 
 NewsForge is a **fully autonomous news agent** that continuously monitors the Solana ecosystem and publishes AI-generated news packages without human intervention.
 
@@ -41,14 +41,14 @@ Every 12 hours, the agent:
 The result? A complete news package (headline, summary, source links, cover image) generated entirely by AI, ready for publishing, every time it runs.
 
 **Use Cases:**
-- 📰 Automated news publishing for Web3 communities
-- 🤖 Proof of autonomous agent capability
-- 💰 Transparent API token usage tracking
-- 🔍 Audit trail of AI-generated content
+-  Automated news publishing for Web3 communities
+-  Proof of autonomous agent capability
+-  Transparent API token usage tracking
+-  Audit trail of AI-generated content
 
 ---
 
-## ✨ Key Features
+##  Key Features
 
 - **100% Autonomous** — Runs on schedule with zero manual intervention
 - **Real Ace Data Cloud Usage** — Direct integration with 3+ Ace APIs
@@ -61,7 +61,7 @@ The result? A complete news package (headline, summary, source links, cover imag
 
 ---
 
-## 🔄 How It Works
+##  How It Works
 
 ### The Autonomous Pipeline
 
@@ -103,7 +103,7 @@ The result? A complete news package (headline, summary, source links, cover imag
 
 ---
 
-## 🎨 Ace Data Cloud Integration
+##  Ace Data Cloud Integration
 
 NewsForge demonstrates **deep, measurable integration** with Ace Data Cloud across the entire workflow:
 
@@ -145,7 +145,7 @@ Every token usage is logged and auditable in the run history.
 
 ---
 
-## 🛰️ SAP Mainnet Registration
+##  SAP Mainnet Registration
 
 NewsForge is registered as an autonomous agent on the **Synapse Agent Protocol (SAP) mainnet**:
 
@@ -162,7 +162,7 @@ The agent operates under the x402 payment protocol, enabling transparent, trustl
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 ### High-Level System Design
 
@@ -237,7 +237,7 @@ The agent operates under the x402 payment protocol, enabling transparent, trustl
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
@@ -251,7 +251,7 @@ The agent operates under the x402 payment protocol, enabling transparent, trustl
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Prerequisites
 - Node.js 24+ and npm/pnpm
@@ -375,7 +375,7 @@ newsforge/
 
 ---
 
-## 🔐 Environment Variables
+##  Environment Variables
 
 ### Required
 
@@ -435,7 +435,7 @@ NewsForge meets **all requirements** for the OOBE Protocol × Ace Data Cloud Usa
 - **Token balance reporting** at `/api/token-status`
 - **Cost breakdown** per run (Serp: 4 tokens, Chat: 200+, Image: 4000+)
 
-**Evidence:** Dashboard shows token costs for every run. Live deployment at https://newsforge-backend.up.railway.app
+**Evidence:** Dashboard shows token costs for every run. Live deployment at https://newsforge.up.railway.app
 
 ### ✅ SAP Mainnet Registration
 - Agent registered on **Synapse Agent Protocol mainnet**
@@ -450,11 +450,11 @@ NewsForge meets **all requirements** for the OOBE Protocol × Ace Data Cloud Usa
 - **Full audit trail** — Every run logged, every token tracked
 - **Source code public** — Full transparency, code review ready
 
-**Evidence:** Visit https://newsforge-backend.up.railway.app and trigger a run. Results appear in real-time.
+**Evidence:** Visit https://newsforge.up.railway.app and trigger a run. Results appear in real-time.
 
 ---
 
-## 📊 Usage Metrics
+##  Usage Metrics
 
 ### Current Live Stats
 - **Runs completed:** 100+
@@ -472,13 +472,13 @@ NewsForge meets **all requirements** for the OOBE Protocol × Ace Data Cloud Usa
 | Generate Image | Flux/DALL-E | 3500-4500 | ~$0.02 |
 | **Total** | **All APIs** | **~250 avg** | **~$0.025** |
 
-View live metrics at https://newsforge-backend.up.railway.app/api/token-status
+View live metrics at https://newsforge.up.railway.app/api/token-status
 
 ---
 
 ## 🔗 Important Links
 
-- **Live Dashboard:** https://newsforge-backend.up.railway.app
+- **Live Dashboard:**  https://newsforge.up.railway.app/
 - **GitHub Repository:** https://github.com/sidneycodes1/Newsforge
 - **Bounty Page:** https://superteam.fun/earn (OOBE x Ace Data Cloud)
 - **Ace Data Cloud:** https://platform.acedata.cloud
@@ -496,7 +496,7 @@ View live metrics at https://newsforge-backend.up.railway.app/api/token-status
 
 ---
 
-## 🤝 Contributing
+##  Contributing
 
 NewsForge is built for the OOBE Protocol × Ace Data Cloud bounty. Contributions are welcome but should:
 
@@ -518,7 +518,7 @@ MIT License — See [LICENSE](LICENSE) for details.
 
 ---
 
-## 🎯 Quick Reference
+##  Quick Reference
 
 **Want to understand what this is?**  
 Read the [What is NewsForge?](#-what-is-newsforge) section above.
@@ -539,7 +539,7 @@ Open an issue on GitHub or reach out on X [@sidneycodes](https://x.com/sidneycod
 
 <div align="center">
 
-**Built with ❤️ for the Solana ecosystem**
+**Built with  for the Solana ecosystem**
 
 *NewsForge — Autonomous news for the Web3 era*
 
